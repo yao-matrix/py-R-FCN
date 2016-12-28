@@ -1,6 +1,19 @@
+# Add-on Note
 This branch of Caffe extend [Microsoft Caffe](http://github.com/Microsoft/caffe) by integrating [MKL DNN API accelerations](http://github.com/intel/caffe) and doing many extra OpenMP/Zero-Copy optimizations to make py-RFCN faster.We can get 20x acceleration compared with Vanilla CPU Caffe in Pascal-VOC RFCN end2end case in Xeon E5 2699-v4.
 
+## How to use MKL's DNN API
+1. go to ./external/mkl and run prepare_mkl.sh. Once it's done, you can see a mklml_lnx_2017.0.2.20161122 folder in ./external/mkl directory
+2. Update BLAS_INCLUDE and BLAS_LIB's absolute path part in Makefile.config
+
+## Build
+1. make -j<core number>
+2. make ptcaffe
+
+## This has been tested in CentOS 7.2, suppose no issues in Linux based OS.
+
 **Contact**: Matrix YAO(yaoweifeng0301@126.com)
+
+
 
 This branch of Caffe extends [BVLC-led Caffe](https://github.com/BVLC/caffe) by adding Windows support and other functionalities commonly used by Microsoft's researchers, such as managed-code wrapper, [Faster-RCNN](https://papers.nips.cc/paper/5638-faster-r-cnn-towards-real-time-object-detection-with-region-proposal-networks.pdf), [R-FCN](https://arxiv.org/pdf/1605.06409v2.pdf), etc.
 

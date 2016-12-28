@@ -1,7 +1,12 @@
+# Add-on Notes
+1. Cannot support fine tune models, I am fixing model parse issue in BN layer, you can run below cmd to test performance:
+   $ ./experiments/scripts/rfcn_end2end.sh 0 ResNet-101 pascal_voc
+2. Didn't implement softmax_loss_ohem_layer's CPU, coming soon...
+
 # py-R-FCN
 R-FCN: Object Detection via Region-based Fully Convolutional Networks
 
-py-R-FCN now supports both joint training and alternative optimization. 
+py-R-FCN now supports both joint training and alternative optimization.
 
 ### Disclaimer
 
@@ -63,9 +68,9 @@ R-FCN, ResNet-101 | VOC 07+12 trainval  | VOC 07 test           | 79.4%| 0.136se
 
 ### Requirements: software
 
-0. **`Important`** Please use the [Microsoft-version Caffe(@commit 1a2be8e)](https://github.com/Microsoft/caffe/tree/1a2be8ecf9ba318d516d79187845e90ac6e73197), this Caffe supports R-FCN layer, and the prototxt in this repository follows the Microsoft-version Caffe's layer name. You need to put the Caffe root folder under py-R-FCN folder, just like what py-faster-rcnn does.
+0. ~~**`Important`** Please use the [Microsoft-version Caffe(@commit 1a2be8e)](https://github.com/Microsoft/caffe/tree/1a2be8ecf9ba318d516d79187845e90ac6e73197), this Caffe supports R-FCN layer, and the prototxt in this repository follows the Microsoft-version Caffe's layer name. You need to put the Caffe root folder under py-R-FCN folder, just like what py-faster-rcnn does.~~
 
-1. Requirements for `Caffe` and `pycaffe` (see: [Caffe installation instructions](http://caffe.berkeleyvision.org/installation.html))
+1. ~~Requirements for `Caffe` and `pycaffe` (see: [Caffe installation instructions](http://caffe.berkeleyvision.org/installation.html))
 
   **Note:** Caffe *must* be built with support for Python layers!
 
@@ -74,7 +79,8 @@ R-FCN, ResNet-101 | VOC 07+12 trainval  | VOC 07 test           | 79.4%| 0.136se
   WITH_PYTHON_LAYER := 1
   # Unrelatedly, it's also recommended that you use CUDNN
   USE_CUDNN := 1
-  ```
+  ```~~
+0. This version contains a Caffe in it, you can read Caffe folder's README.md to see how to build caffe for py-R-FCN.
 2. Python packages you might not have: `cython`, `python-opencv`, `easydict`
 3. [Optional] MATLAB is required for **official** PASCAL VOC evaluation only. The code now includes unofficial Python evaluation code.
 
@@ -84,7 +90,7 @@ Any NVIDIA GPU with 6GB or larger memory is OK(4GB is enough for ResNet-50).
 
 
 ### Installation
-1. Clone the R-FCN repository
+~~1. Clone the R-FCN repository
   ```Shell
   git clone https://github.com/Orpine/py-R-FCN.git
   ```
@@ -103,7 +109,7 @@ Any NVIDIA GPU with 6GB or larger memory is OK(4GB is enough for ResNet-50).
   (I only test on this commit, and I'm not sure whether this Caffe is still compatible with the prototxt in this repository in the future)
   
   If you followed the above instruction, python code will add `$RFCN_ROOT/caffe/python` to `PYTHONPATH` automatically, otherwise you need to add `$CAFFE_ROOT/python` by your own, you could check `$RFCN_ROOT/tools/_init_paths.py` for more details.
-
+~~
 3. Build the Cython modules
     ```Shell
     cd $RFCN_ROOT/lib
