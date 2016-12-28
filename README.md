@@ -79,8 +79,9 @@ R-FCN, ResNet-101 | VOC 07+12 trainval  | VOC 07 test           | 79.4%| 0.136se
   WITH_PYTHON_LAYER := 1
   # Unrelatedly, it's also recommended that you use CUDNN
   USE_CUDNN := 1
-  ```~~
-0. This version contains a Caffe in it, you can read Caffe folder's README.md to see how to build caffe for py-R-FCN.
+  ```
+ ~~
+0. **This version contains a Caffe in it, you can read Caffe folder's README.md to see how to build caffe for py-R-FCN.**
 2. Python packages you might not have: `cython`, `python-opencv`, `easydict`
 3. [Optional] MATLAB is required for **official** PASCAL VOC evaluation only. The code now includes unofficial Python evaluation code.
 
@@ -90,13 +91,13 @@ Any NVIDIA GPU with 6GB or larger memory is OK(4GB is enough for ResNet-50).
 
 
 ### Installation
-~~1. Clone the R-FCN repository
+1. ~~Clone the R-FCN repository
   ```Shell
   git clone https://github.com/Orpine/py-R-FCN.git
   ```
-  We'll call the directory that you cloned R-FCN into `RFCN_ROOT`
+  We'll call the directory that you cloned R-FCN into `RFCN_ROOT`~~
 
-2. Clone the Caffe repository
+2. ~~Clone the Caffe repository
   ```Shell
   cd $RFCN_ROOT
   git clone https://github.com/Microsoft/caffe.git
@@ -108,8 +109,7 @@ Any NVIDIA GPU with 6GB or larger memory is OK(4GB is enough for ResNet-50).
   ```
   (I only test on this commit, and I'm not sure whether this Caffe is still compatible with the prototxt in this repository in the future)
   
-  If you followed the above instruction, python code will add `$RFCN_ROOT/caffe/python` to `PYTHONPATH` automatically, otherwise you need to add `$CAFFE_ROOT/python` by your own, you could check `$RFCN_ROOT/tools/_init_paths.py` for more details.
-~~
+  If you followed the above instruction, python code will add `$RFCN_ROOT/caffe/python` to `PYTHONPATH` automatically, otherwise you need to add `$CAFFE_ROOT/python` by your own, you could check `$RFCN_ROOT/tools/_init_paths.py` for more details.~~
 3. Build the Cython modules
     ```Shell
     cd $RFCN_ROOT/lib
