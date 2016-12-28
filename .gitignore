@@ -3,7 +3,6 @@
 lib/build
 lib/pycocotools/_mask.c
 lib/pycocotools/_mask.so
-caffe
 output
 
 # Byte-compiled / optimized / DLL files
