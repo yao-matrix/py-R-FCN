@@ -1,5 +1,5 @@
 # Add-on Notes
-This branch of Caffe extend [py-R-FCN](git clone https://github.com/Orpine/py-R-FCN) by integrating [MKL DNN API accelerations](http://github.com/intel/caffe) and doing many extra OpenMP/Zero-Copy optimizations to make py-RFCN faster.We can get 20x acceleration compared with Vanilla CPU Caffe in Pascal-VOC RFCN end2end case in Xeon E5 2699-v4.
+This branch of Caffe extend [py-R-FCN](https://github.com/Orpine/py-R-FCN) by integrating [MKL DNN API accelerations](http://github.com/intel/caffe) and doing many extra OpenMP/Zero-Copy optimizations to make py-RFCN faster.We can get 20x acceleration compared with Vanilla CPU Caffe in Pascal-VOC RFCN end2end case in Xeon E5 2699-v4.
 
 ## Known Issues
 1. Cannot support fine tune models, I am fixing model parse issue in BN layer, you can run below cmd to test performance:
