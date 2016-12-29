@@ -1,4 +1,7 @@
 # Add-on Notes
+This branch of Caffe extend [py-R-FCN](git clone https://github.com/Orpine/py-R-FCN) by integrating [MKL DNN API accelerations](http://github.com/intel/caffe) and doing many extra OpenMP/Zero-Copy optimizations to make py-RFCN faster.We can get 20x acceleration compared with Vanilla CPU Caffe in Pascal-VOC RFCN end2end case in Xeon E5 2699-v4.
+
+## Known Issues
 1. Cannot support fine tune models, I am fixing model parse issue in BN layer, you can run below cmd to test performance:
    $ ./experiments/scripts/rfcn_end2end.sh 0 ResNet-101 pascal_voc
 2. Didn't implement softmax_loss_ohem_layer's CPU, coming soon...
@@ -20,7 +23,7 @@ There are slight differences between py-R-FCN and the official R-FCN implementat
 
 #### Some modification
 
-The original py-faster-rcnn uses class-aware bounding box regression. However, R-FCN use class-agnostic bounding box regression to reduce model complexity. So I add a configuration AGNOSTIC into fast_rcnn/config.py, and the default value is False. You should set it to True both on train and test phase if you want to use class-agnostic training and test. 
+The original py-faster-rcnn uses class-aware bounding box regression. However, R-FCN use class-agnostic bounding box regression to reduce model complexity. So I add a configuration AGNOSTIC into fast_rcnn/config.py, and the default value is False. You should set it to True both on train and test phase if you want to use class-agnostic training and test.
 
 OHEM need all rois to select the hard examples, so I changed the sample strategy, set `BATCH_SIZE: -1` for OHEM, otherwise OHEM would not take effect.
 
@@ -46,7 +49,7 @@ If you find R-FCN useful in your research, please consider citing:
         Journal = {arXiv preprint arXiv:1605.06409},
         Year = {2016}
     }
-    
+
 ### Main Results
 
 #### joint training
@@ -67,56 +70,23 @@ R-FCN, ResNet-50  | VOC 07+12 trainval  | VOC 07 test           | 77.4%| 0.099se
 R-FCN, ResNet-101 | VOC 07+12 trainval  | VOC 07 test           | 79.4%| 0.136sec           |
 
 ### Requirements: software
-
-0. ~~**`Important`** Please use the [Microsoft-version Caffe(@commit 1a2be8e)](https://github.com/Microsoft/caffe/tree/1a2be8ecf9ba318d516d79187845e90ac6e73197), this Caffe supports R-FCN layer, and the prototxt in this repository follows the Microsoft-version Caffe's layer name. You need to put the Caffe root folder under py-R-FCN folder, just like what py-faster-rcnn does.~~
-
-1. ~~Requirements for `Caffe` and `pycaffe` (see: [Caffe installation instructions](http://caffe.berkeleyvision.org/installation.html))
-
-  **Note:** Caffe *must* be built with support for Python layers!
-
-  ```make
-  # In your Makefile.config, make sure to have this line uncommented
-  WITH_PYTHON_LAYER := 1
-  # Unrelatedly, it's also recommended that you use CUDNN
-  USE_CUDNN := 1
-  ```
- ~~
-0. **This version contains a Caffe in it, you can read Caffe folder's README.md to see how to build caffe for py-R-FCN.**
-2. Python packages you might not have: `cython`, `python-opencv`, `easydict`
-3. [Optional] MATLAB is required for **official** PASCAL VOC evaluation only. The code now includes unofficial Python evaluation code.
-
-### Requirements: hardware
-
-Any NVIDIA GPU with 6GB or larger memory is OK(4GB is enough for ResNet-50).
-
+0. **This version contains a Caffe in it, you can read caffe folder's README.md to see how to build caffe for py-R-FCN.**
+1. Python packages you might not have: `cython`, `python-opencv`, `easydict`
+2. [Optional] MATLAB is required for **official** PASCAL VOC evaluation only. The code now includes unofficial Python evaluation code.
 
 ### Installation
-1. ~~Clone the R-FCN repository
+1. Clone repository
   ```Shell
-  git clone https://github.com/Orpine/py-R-FCN.git
+  git clone https://github.com/yao-matrix/py-R-FCN.git
   ```
-  We'll call the directory that you cloned R-FCN into `RFCN_ROOT`~~
+  We'll call the directory that you cloned R-FCN into `RFCN_ROOT`</strike>
 
-2. ~~Clone the Caffe repository
-  ```Shell
-  cd $RFCN_ROOT
-  git clone https://github.com/Microsoft/caffe.git
-  ```
-  [optional] 
-  ```Shell
-  cd caffe
-  git reset --hard 1a2be8e
-  ```
-  (I only test on this commit, and I'm not sure whether this Caffe is still compatible with the prototxt in this repository in the future)
-  
-  If you followed the above instruction, python code will add `$RFCN_ROOT/caffe/python` to `PYTHONPATH` automatically, otherwise you need to add `$CAFFE_ROOT/python` by your own, you could check `$RFCN_ROOT/tools/_init_paths.py` for more details.~~
-3. Build the Cython modules
+2. Build the Cython modules
     ```Shell
     cd $RFCN_ROOT/lib
     make
     ```
-
-4. Build Caffe and pycaffe
+3. Build Caffe and pycaffe
     ```Shell
     cd $RFCN_ROOT/caffe
     # Now follow the Caffe installation instructions here:
@@ -124,7 +94,7 @@ Any NVIDIA GPU with 6GB or larger memory is OK(4GB is enough for ResNet-50).
 
     # If you're experienced with Caffe and have all of the requirements installed
     # and your Makefile.config in place, then simply do:
-    make -j8 && make pycaffe
+    make -j<core bumber> && make pycaffe
    ```
 
 ### Demo
@@ -137,11 +107,11 @@ Any NVIDIA GPU with 6GB or larger memory is OK(4GB is enough for ResNet-50).
     ```
 
 2.  To run the demo
-  
+
     ```Shell
     $RFCN/tools/demo_rfcn.py
     ```
-    
+
   The demo performs detection using a ResNet-101 network trained for detection on PASCAL VOC 2007.
 
 
@@ -210,8 +180,7 @@ Output is written underneath `$RFCN_ROOT/output`
 
 ```Shell
 cd $RFCN_ROOT
-./experiments/scripts/rfcn_end2end[_ohem].sh [GPU_ID] [NET] [DATASET] [--set ...]
-# GPU_ID is the GPU you want to train on
+./experiments/scripts/rfcn_end2end[_ohem].sh 0 [NET] [DATASET] [--set ...]
 # NET in {ResNet-50, ResNet-101} is the network arch to use
 # DATASET in {pascal_voc, coco} is the dataset to use(I only tested on pascal_voc)
 # --set ... allows you to specify fast_rcnn.config options, e.g.
@@ -231,7 +200,5 @@ output/<experiment directory>/<dataset name>/<network snapshot name>/
 ```
 
 ### Misc
-
-Tested on Ubuntu 14.04 with a Titan X / GTX1080 GPU and Intel Xeon CPU E5-2620 v2 @ 2.10GHz 
 
 py-faster-rcnn code can also work properly, but I do not add any other feature(such as ResNet and OHEM).
