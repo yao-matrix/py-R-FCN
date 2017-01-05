@@ -106,9 +106,17 @@ void SGDSolver<Dtype>::PreSolve() {
   history_.clear();
   update_.clear();
   temp_.clear();
+  // LOG(ERROR) << "net param size: "<< net_params.size();
   for (int i = 0; i < net_params.size(); ++i) {
+	// if (!net_params[i]) {
+	//	LOG(ERROR) << "NULL net params";
+	//	continue;
+	// }
     const vector<int>& shape = net_params[i]->shape();
-    history_.push_back(shared_ptr<Blob<Dtype> >(new Blob<Dtype>(shape)));
+	// for (int j = 0; j < shape.size(); j++) {
+	// 	LOG(ERROR) << shape[j];
+	// }
+	history_.push_back(shared_ptr<Blob<Dtype> >(new Blob<Dtype>(shape)));
     update_.push_back(shared_ptr<Blob<Dtype> >(new Blob<Dtype>(shape)));
     temp_.push_back(shared_ptr<Blob<Dtype> >(new Blob<Dtype>(shape)));
   }
@@ -144,14 +152,15 @@ void SGDSolver<Dtype>::ApplyUpdate() {
   }
   ClipGradients();
   int learnable_param_size = this->net_->learnable_params().size();
+
 #ifdef _OPENMP
 #pragma omp for
+#endif
   for (int param_id = 0; param_id < learnable_param_size; ++param_id) {
 	// LOG(ERROR) << "update param: " << param_id;
     ApplyUpdate(param_id);
 	// LOG(ERROR) << "update param: " << param_id << " done";
   }
-#endif
 }
 
 template <typename Dtype>

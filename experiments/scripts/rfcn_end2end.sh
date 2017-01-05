@@ -12,7 +12,7 @@ set -e
 
 export PYTHONUNBUFFERED="True"
 
-GPU_ID=$1
+# GPU_ID=$1
 NET=$2
 NET_lc=${NET,,}
 DATASET=$3
@@ -48,9 +48,10 @@ LOG="experiments/logs/rfcn_end2end_${NET}_${EXTRA_ARGS_SLUG}.txt.`date +'%Y-%m-%
 exec &> >(tee -a "$LOG")
 echo Logging output to "$LOG"
 
-time ./tools/train_net.py --gpu ${GPU_ID} \
+time ./tools/train_net.py  \
   --solver models/${PT_DIR}/${NET}/rfcn_end2end/solver.prototxt \
   --imdb ${TRAIN_IMDB} \
+  --weights data/imagenet_models/${NET}-model.caffemodel \
   --iters ${ITERS} \
   --cfg experiments/cfgs/rfcn_end2end.yml \
   ${EXTRA_ARGS}
@@ -59,7 +60,7 @@ set +x
 NET_FINAL=`grep -B 1 "done solving" ${LOG} | grep "Wrote snapshot" | awk '{print $4}'`
 set -x
 
-time ./tools/test_net.py --gpu ${GPU_ID} \
+time ./tools/test_net.py  \
   --def models/${PT_DIR}/${NET}/rfcn_end2end/test_agnostic.prototxt \
   --net ${NET_FINAL} \
   --imdb ${TEST_IMDB} \

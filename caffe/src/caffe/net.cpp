@@ -183,6 +183,7 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
           << "propagate_down param must be specified "
           << "either 0 or bottom_size times ";
     }
+
     if (share_from_root) {
       LOG(INFO) << "Sharing layer " << layer_param.name() << " from root net";
       layers_.push_back(root_net_->layers_[layer_id]);
@@ -190,6 +191,7 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
     } else {
       layers_.push_back(LayerRegistry<Dtype>::CreateLayer(layer_param));
     }
+ 
     layer_names_.push_back(layer_param.name());
     LOG_IF(INFO, Caffe::root_solver())
         << "Creating Layer " << layer_param.name();
@@ -383,7 +385,7 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
   debug_info_ = param.debug_info();
   time_info_ = param.time_info();
 
-  // LOG(ERROR) << "done";
+  // LOG(ERROR) << "init done with " << param.engine();
   LOG_IF(INFO, Caffe::root_solver()) << "Network initialization done.";
 }
 
@@ -483,6 +485,15 @@ void Net<Dtype>::CompilationRuleOne(const NetParameter& param,
                                scale_param().bias_term();
         layer_param->mutable_batch_norm_param()->
         set_bias_term(scale_bias_term);
+
+        // copy scale layer params to BN layer
+        for (int i = 0; i < consumer_layer_param.param_size(); i++) {
+            ParamSpec* param_spec = layer_param->add_param();
+            param_spec->set_lr_mult(consumer_layer_param.param(i).lr_mult());
+            param_spec->set_decay_mult(consumer_layer_param.param(i).decay_mult());
+        }
+        // LOG(ERROR) << "layer_param size: " << layer_param->param_size();
+        // LOG(ERROR) << "param lr: " << layer_param->param(4).lr_mult();
       }
     }
 
@@ -777,9 +788,10 @@ Dtype Net<Dtype>::ForwardFromTo(int start, int end) {
   
   if (time_info_) {
 	forward_timer.Start();
-	if (iter_cnt == 1)
+	if (iter_cnt == 1) {
 		total_timer.Start();
-  	}
+    }
+  }
   
   Dtype loss = 0;
   for (int i = start; i <= end; ++i) {
@@ -819,13 +831,15 @@ Dtype Net<Dtype>::ForwardTo(int end) {
 }
 
 template <typename Dtype>
-const vector<Blob<Dtype>*>& Net<Dtype>::Forward(Dtype* loss) {\
-  // LOG(ERROR) << "here....";
+const vector<Blob<Dtype>*>& Net<Dtype>::Forward(Dtype* loss) {
+  // Timer timer;
+  // timer.Start();
   if (loss != NULL) {
     *loss = ForwardFromTo(0, layers_.size() - 1);
   } else {
     ForwardFromTo(0, layers_.size() - 1);
   }
+  // LOG(ERROR) << "Forward takes: " << timer.MicroSeconds() / 1000. << " ms";
   return net_output_blobs_;
 }
 
@@ -1012,7 +1026,10 @@ void Net<Dtype>::BackwardTo(int end) {
 
 template <typename Dtype>
 void Net<Dtype>::Backward() {
+  // Timer timer;
+  // timer.Start();
   BackwardFromTo(layers_.size() - 1, 0);
+  // LOG(ERROR) << "backward takes: " << timer.MicroSeconds() / 1000. << " ms";
   if (debug_info_) {
     Dtype asum_data = 0, asum_diff = 0, sumsq_data = 0, sumsq_diff = 0;
     for (int i = 0; i < learnable_params_.size(); ++i) {
@@ -1051,9 +1068,37 @@ void Net<Dtype>::CopyTrainedLayersFrom(const NetParameter& param) {
       LOG(INFO) << "Ignoring source layer " << source_layer_name;
       continue;
     }
-    LOG(ERROR) << "Copying source layer " << source_layer_name << "to " << layer_names_[target_layer_id];
-    vector<shared_ptr<Blob<Dtype> > >& target_blobs =
-        layers_[target_layer_id]->blobs();
+    // LOG(ERROR) << "Copying source layer " << source_layer_name << " to " << layer_names_[target_layer_id];
+	// LOG(ERROR) << "Source layer type: " << source_layer.type() << ", Source layer engine: " << source_layer.batch_norm_param().engine() << ", Solution engine: " << param.engine();
+	vector<shared_ptr<Blob<Dtype> > >& target_blobs = layers_[target_layer_id]->blobs();
+
+	if (source_layer.type().compare("BatchNorm") == 0) {
+      const LayerParameter& target_layer = layers_[target_layer_id]->layer_param();
+      const LayerParameter& consumer_layer = GetBlobConsumer(source_layer.top(0), param, i + 1);
+
+      // LOG(ERROR) << "source layer type: " << source_layer.type() << " , consumer layer type: " << consumer_layer.type() << ", engine: " << target_layer.engine();
+      // Consumer layer of blob produced by BN
+      // has to be Scale layer with one Input Blob, merge Scale blobs into BN blobs
+      if ((consumer_layer.type().compare("Scale") == 0) &&
+           (consumer_layer.bottom_size() == 1) && (target_layer.engine().compare("MKL2017") == 0) ) {
+			CHECK_EQ(target_blobs.size(), source_layer.blobs_size() + consumer_layer.blobs_size())
+              << "Incompatible number of blobs for layer " << source_layer_name;
+			for (int j = 0; j < target_blobs.size(); ++j) {
+              const bool kReshape = false;
+			  if (j < 2) {
+                if (j < consumer_layer.blobs_size()) {
+				  target_blobs[j]->FromProto(consumer_layer.blobs(j), kReshape);
+                }
+			  } else {
+                if ( j - 2 < source_layer.blobs_size()) {
+				  target_blobs[j]->FromProto(source_layer.blobs(j - 2), kReshape);
+                }
+			  }
+            }
+            continue;
+	  }
+	}
+
     CHECK_EQ(target_blobs.size(), source_layer.blobs_size())
         << "Incompatible number of blobs for layer " << source_layer_name;
     for (int j = 0; j < target_blobs.size(); ++j) {

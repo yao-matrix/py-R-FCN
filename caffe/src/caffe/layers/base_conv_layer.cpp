@@ -298,8 +298,8 @@ void BaseConvolutionLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
 
   // ---- openmp ------------------------------------------
   num_of_threads_ = 1;
-
 #ifdef _OPENMP
+  // LOG(ERROR) << "OMP max thread num: " << omp_get_max_threads();
   num_of_threads_ = omp_get_max_threads() < bottom[0]->shape(0) ?
                     omp_get_max_threads() : bottom[0]->shape(0);
   if (num_of_threads_ < 1) {
@@ -307,6 +307,7 @@ void BaseConvolutionLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
                   << num_of_threads_;
      num_of_threads_ = 1;
   }
+  // LOG(ERROR) << "final thread number: " << num_of_threads_;
 #endif
 
   int col_buffer_mt_size = num_of_threads_ * col_buffer_.count();

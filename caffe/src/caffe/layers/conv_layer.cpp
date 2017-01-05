@@ -88,13 +88,13 @@ void ConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     Dtype* top_data = top[i]->mutable_cpu_data();
     // LOG(ERROR) << "get data takes: " << timer2.MicroSeconds() / 1000. << " ms";
     // timer2.Start();
-#ifdef _OPENMP
-    #pragma omp parallel for num_threads(this->num_of_threads_)
-#endif
+// #ifdef _OPENMP
+//    #pragma omp parallel for num_threads(this->num_of_threads_)
+// #endif
       for (int n = 0; n < this->num_; ++n) {
-        this->forward_cpu_gemm(bottom_data + n*this->bottom_dim_,
+        this->forward_cpu_gemm(bottom_data + n * this->bottom_dim_,
                                weight,
-                               top_data + n*this->top_dim_);
+                               top_data + n * this->top_dim_);
         // LOG(ERROR) << "mkl thread number: " << omp_get_max_threads();
         if (this->bias_term_) {
           const Dtype* bias = this->blobs_[1]->cpu_data();
@@ -138,32 +138,32 @@ void ConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
 
     // timer2.Start();
     if (this->param_propagate_down_[0]) {
-#ifdef _OPENMP
-      this->clear_weight_mt();
-      #pragma omp parallel num_threads(this->num_of_threads_)
-#endif
+// #ifdef _OPENMP
+//      this->clear_weight_mt();
+//      #pragma omp parallel num_threads(this->num_of_threads_)
+// #endif
       {
-#ifdef _OPENMP
-        #pragma omp for
-#endif
+// #ifdef _OPENMP
+//         #pragma omp for
+// #endif
         for (int n = 0; n < this->num_; ++n) {
           // gradient w.r.t. weight. Note that we will accumulate diffs.
           this->weight_cpu_gemm(bottom_data + n * this->bottom_dim_,
                 top_diff + n * this->top_dim_, weight_diff);
         }
 
-#ifdef _OPENMP
-        this->sum_weight_mt(weight_diff);
-#endif
+// #ifdef _OPENMP
+//        this->sum_weight_mt(weight_diff);
+// #endif
       }
     }
     // LOG(ERROR) << "weight back propagation takes: " << timer2.MicroSeconds() / 1000. << " ms";
     // timer2.Start();
 	// LOG(ERROR) << this->layer_param_.name() << " blob: " << i << " propagate down: " << propagate_down[i];
     if (propagate_down[i]) {
-#ifdef _OPENMP
-      #pragma omp parallel for num_threads(this->num_of_threads_)
-#endif
+// #ifdef _OPENMP
+//       #pragma omp parallel for num_threads(this->num_of_threads_)
+// #endif
         for (int n = 0; n < this->num_; ++n) {
           // gradient w.r.t. bottom data, if necessary.
           this->backward_cpu_gemm(top_diff + n * this->top_dim_, weight,

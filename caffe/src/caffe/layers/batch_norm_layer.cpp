@@ -73,16 +73,18 @@ void BatchNormLayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
     }
   }
 
+#if 0
   for (int i = 0; i < this->blobs_.size(); i++) {
-	  if (this->layer_param_.param_size() == i) {
-		  ParamSpecs* fixed_param_spec = this->layer_param_.add_params();
-		  fixed_param_spec->set_lr_mult(0.f);
-	  } else {
-		  CHECK_EQ(this->layer_param_.param(i).lr_mult(), 0.f)
-			  << "Cannot configure batch normalization statistics as layer"
-			  << "parameters.";
-	  }
+    if (this->layer_param_.param_size() == i) {
+	ParamSpecs* fixed_param_spec = this->layer_param_.add_params();
+	fixed_param_spec->set_lr_mult(0.f);
+    } else {
+	CHECK_EQ(this->layer_param_.param(i).lr_mult(), 0.f)
+	  << "Cannot configure batch normalization statistics as layer"
+	  << "parameters.";
+    }
   }
+#endif
 }
 
 template <typename Dtype>

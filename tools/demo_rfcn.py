@@ -124,7 +124,7 @@ if __name__ == '__main__':
 
     if not os.path.isfile(caffemodel):
         raise IOError(('{:s} not found.\n').format(caffemodel))
-
+    args.cpu_mode = 1 
     if args.cpu_mode:
         caffe.set_mode_cpu()
     else:
@@ -134,12 +134,18 @@ if __name__ == '__main__':
     net = caffe.Net(prototxt, caffemodel, caffe.TEST)
 
     print '\n\nLoaded network {:s}'.format(caffemodel)
+    import time
+    print '\nStart'
+    time.sleep(5)
+    print '\nEnd' 
 
     # Warmup on a dummy image
     im = 128 * np.ones((300, 500, 3), dtype=np.uint8)
+    print '\n after im' 
     for i in xrange(2):
+        print '\n before im detect'
         _, _= im_detect(net, im)
-
+        # print '\n after im detect'
     im_names = ['000456.jpg', '000542.jpg', '001150.jpg',
                 '001763.jpg', '004545.jpg']
     for im_name in im_names:

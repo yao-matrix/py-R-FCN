@@ -1000,6 +1000,29 @@ void UpgradeNetInput(NetParameter* net_param) {
   net_param->clear_input_dim();
 }
 
+bool NetNeedsBatchNormUpgrade(const NetParameter& net_param) {
+  for (int i = 0; i < net_param.layer_size(); ++i) {
+    // Check if BatchNorm layers declare three parameters, as required by
+    // the previous BatchNorm layer definition.
+    if (net_param.layer(i).type() == "BatchNorm"
+        && net_param.layer(i).param_size() == 3) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void UpgradeNetBatchNorm(NetParameter* net_param) {
+  for (int i = 0; i < net_param->layer_size(); ++i) {
+    // Check if BatchNorm layers declare three parameters, as required by
+    // the previous BatchNorm layer definition.
+    if (net_param->layer(i).type() == "BatchNorm"
+        && net_param->layer(i).param_size() == 3) {
+      net_param->mutable_layer(i)->clear_param();
+    }
+  }
+}
+
 // Return true iff the solver contains any old solver_type specified as enums
 bool SolverNeedsTypeUpgrade(const SolverParameter& solver_param) {
   if (solver_param.has_solver_type()) {

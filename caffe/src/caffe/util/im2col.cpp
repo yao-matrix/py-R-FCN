@@ -270,7 +270,7 @@ void col2im_cpu(const Dtype* data_col, const int channels,
   int dil_patch_w = (kernel_w - 1) * dilation_w + 1;
   int height_col = (height + 2 * pad_h - dil_patch_h) / stride_h + 1;
   int width_col = (width + 2 * pad_w - dil_patch_w) / stride_w + 1;
-  int num_kernels = channels * height * width;
+  // int num_kernels = channels * height * width;
   int channels_col = channels * kernel_h * kernel_w;
 #pragma omp parallel for
   for (int c = 0; c < channels_col; ++c) {

@@ -371,11 +371,11 @@ class MKLBatchNormLayer : public Layer<Dtype> {
         bwd_top_diff(new MKLDiff<Dtype>()),
         bwd_bottom_diff(new MKLDiff<Dtype>()),
         batchNormFwd(static_cast<dnnPrimitive_t>(NULL)),
-        batchNormBwdData(static_cast<dnnPrimitive_t>(NULL)),
-        batchNormBwdScaleShift(static_cast<dnnPrimitive_t>(NULL)),
-        workspace_buffer_(static_cast<Dtype*>(NULL)),
+        batchNormBwd(static_cast<dnnPrimitive_t>(NULL)),
         scaleShift_buffer_(static_cast<Dtype*>(NULL)),
-        layout_usr_(static_cast<dnnLayout_t>(NULL)) {
+        scaleShift_diff_(static_cast<Dtype*>(NULL)),
+        layout_usr_(static_cast<dnnLayout_t>(NULL)),
+        blobs_initialized_(false) {
 		}
 
   virtual ~MKLBatchNormLayer();
@@ -416,10 +416,15 @@ class MKLBatchNormLayer : public Layer<Dtype> {
   shared_ptr<MKLDiff<Dtype> > bwd_top_diff;
   shared_ptr<MKLDiff<Dtype> > bwd_bottom_diff;
   Blob<Dtype> temp_;
-  dnnPrimitive_t batchNormFwd, batchNormBwdData, batchNormBwdScaleShift;
-  Dtype *workspace_buffer_;
+  dnnPrimitive_t batchNormFwd, batchNormBwd;
   Dtype *scaleShift_buffer_;
+  Dtype *scaleShift_diff_;
   dnnLayout_t layout_usr_;
+
+  bool use_global_stats_;
+  bool blobs_initialized_;
+  dnnBatchNormalizationFlag_t flags_;
+  Blob<Dtype> mean_, variance_;
 };
 
 template <typename Dtype>

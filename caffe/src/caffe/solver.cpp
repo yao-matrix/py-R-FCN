@@ -47,6 +47,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "caffe/util/io.hpp"
 #include "caffe/util/upgrade_proto.hpp"
 
+#include "caffe/util/benchmark.hpp"
+
 namespace caffe {
 
 template<typename Dtype>
@@ -247,15 +249,22 @@ void Solver<Dtype>::InitTestNets() {
 template <typename Dtype>
 Dtype Solver<Dtype>::ForwardBackward() {
   // zero-init the params
+  // Timer timer;
+  // timer.Start();
   net_->ClearParamDiffs();
+  // LOG(ERROR) << "clear param diff: " << timer.MicroSeconds() / 1000. << " ms";
 
   Dtype loss = Dtype();
   vector<Blob<Dtype>*> bottom_vec;
 
   // accumulate the loss and gradient
+  // LOG(ERROR) << "iter size: " << param_.iter_size();
+  // timer.Start();
   for (int i = 0; i < param_.iter_size(); ++i) {
     loss += net_->ForwardBackward();
   }
+  // LOG(ERROR) << "forward-backward: " << timer.MicroSeconds() / 1000. << " ms";
+
   return loss / param_.iter_size();
 }
 
@@ -266,8 +275,10 @@ void Solver<Dtype>::Step(int iters) {
   int average_loss = this->param_.average_loss();
   losses_.clear();
   smoothed_loss_ = 0;
+  // Timer timer;
 
   while (iter_ < stop_iter) {
+    // LOG(ERROR) << "test interval: " << param_.test_interval();
     if (param_.test_interval() && iter_ % param_.test_interval() == 0
         && (iter_ > 0 || param_.test_initialization())
         && Caffe::root_solver()) {
@@ -278,21 +289,28 @@ void Solver<Dtype>::Step(int iters) {
       }
     }
 
+    // LOG(ERROR) << "start callbacks size: " << callbacks_.size();
     for (int i = 0; i < callbacks_.size(); ++i) {
       callbacks_[i]->on_start();
     }
+
     const bool display = param_.display() && iter_ % param_.display() == 0;
 	// LOG(INFO) << "---------------------debug" << param_.debug_info() << "   time " << param_.time_info(); 
     net_->set_debug_info(display && param_.debug_info());
 	net_->set_time_info(param_.time_info());
 	// LOG(ERROR) << "iter: " << iter_ << " forward_backward starts";
+    // timer.Start();
     Dtype loss = forward_backward_();
 	// LOG(ERROR) << "forward_backward done";
+    // LOG(ERROR) << "forward_backward time: " << timer.MicroSeconds() / 1000. << " ms";
 
     // average the loss across iterations for smoothed reporting
 	// LOG(ERROR) << "update smoothed loss starts";
+    // timer.Start();
     UpdateSmoothedLoss(loss, start_iter, average_loss);
+    // LOG(ERROR) << "UpdateSmoothedLoss: " << timer.MicroSeconds() / 1000. << " ms";
 	// LOG(ERROR) << "update smoothed loss done";
+    // timer.Start();
     if (display) {
 #ifdef USE_MPI
       LOG_IF(INFO, Caffe::root_solver())
@@ -322,6 +340,7 @@ void Solver<Dtype>::Step(int iters) {
         }
       }
     }
+    // LOG(ERROR) << "display: " << timer.MicroSeconds() / 1000. << " ms";
 
 
 	// LOG(ERROR) << "gradients ready callback starts with " << callbacks_.size() << " callbacks";
@@ -331,23 +350,29 @@ void Solver<Dtype>::Step(int iters) {
 	// LOG(ERROR) << "gradients ready callback done";
 
 	// LOG(ERROR) << "apply update starts, with update disable flag: " << param().disabled_update();
+    // timer.Start();
     if (!param().disabled_update()) {
       ApplyUpdate();
     }
+    // LOG(ERROR) << "apply update: " << timer.MicroSeconds() / 1000. << " ms";
 	// LOG(ERROR) << "apply update done";
 
     // Increment the internal iter_ counter -- its value should always indicate
     // the number of times the weights have been updated.
     ++iter_;
 
+    // timer.Start();
     SolverAction::Enum request = GetRequestedAction();
+    // LOG(ERROR) << "get requested action: " << timer.MicroSeconds() / 1000. << " ms";
 
     // Save a snapshot if needed.
     if ((param_.snapshot()
          && iter_ % param_.snapshot() == 0
          && Caffe::root_solver()) ||
          (request == SolverAction::SNAPSHOT)) {
+      // timer.Start();
       Snapshot();
+      // LOG(ERROR) << "snapshot takes: " << timer.MicroSeconds() / 1000. << " ms";
     }
     if (SolverAction::STOP == request) {
       requested_early_exit_ = true;

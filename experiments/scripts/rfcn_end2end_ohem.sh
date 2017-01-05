@@ -12,7 +12,7 @@ set -e
 
 export PYTHONUNBUFFERED="True"
 
-GPU_ID=$1
+# GPU_ID=$1
 NET=$2
 NET_lc=${NET,,}
 DATASET=$3
@@ -24,7 +24,7 @@ EXTRA_ARGS_SLUG=${EXTRA_ARGS// /_}
 
 case $DATASET in
   pascal_voc)
-    TRAIN_IMDB="voc_2007_trainval+voc_2012_trainval"
+    TRAIN_IMDB="voc_0712_trainval"
     TEST_IMDB="voc_0712_test"
     PT_DIR="pascal_voc"
     ITERS=110000
@@ -36,7 +36,7 @@ case $DATASET in
     TRAIN_IMDB="coco_2014_train"
     TEST_IMDB="coco_2014_val"
     PT_DIR="coco"
-    ITERS=1920000
+    ITERS=960000
     ;;
   *)
     echo "No dataset given"
@@ -49,7 +49,7 @@ exec &> >(tee -a "$LOG")
 echo Logging output to "$LOG"
 
 
-time ./tools/train_net.py --gpu ${GPU_ID} \
+time ./tools/train_net.py \
   --solver models/${PT_DIR}/${NET}/rfcn_end2end/solver_ohem.prototxt \
   --weights data/imagenet_models/${NET}-model.caffemodel \
   --imdb ${TRAIN_IMDB} \

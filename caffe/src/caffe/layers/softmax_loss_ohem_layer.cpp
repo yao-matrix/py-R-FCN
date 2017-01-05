@@ -95,14 +95,81 @@ Dtype SoftmaxWithLossOHEMLayer<Dtype>::get_normalizer(
 template <typename Dtype>
 void SoftmaxWithLossOHEMLayer<Dtype>::Forward_cpu(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
-  NOT_IMPLEMENTED;
+
+  // The forward pass computes the softmax prob values.
+  softmax_layer_->Forward(softmax_bottom_vec_, softmax_top_vec_);
+  const Dtype* prob_data = prob_.cpu_data();
+  const Dtype* label = bottom[1]->cpu_data();
+  int dim = prob_.count() / outer_num_;
+  Dtype* loss_data = bottom[0]->mutable_cpu_diff();
+  int count = 0;
+  Dtype loss = 0;
+
+  for (int i = 0; i < outer_num_; ++i) {
+    for (int j = 0; j < inner_num_; j++) {
+      const int label_value = static_cast<int>(label[i * inner_num_ + j]);
+      if (has_ignore_label_ && label_value == ignore_label_) {
+        continue;
+      }
+      DCHECK_GE(label_value, 0);
+      DCHECK_LT(label_value, prob_.shape(softmax_axis_));
+
+      // loss -= log(std::max(prob_data[i * dim + label_value * inner_num_ + j],
+      //                     Dtype(FLT_MIN)));
+      loss_data[i*inner_num_+j] = -log(std::max(prob_data[i * dim + label_value * inner_num_ + j],
+                           Dtype(FLT_MIN)));
+      ++count;
+    }
+  }
+  loss = caffe_cpu_asum(count, loss_data);
+  top[0]->mutable_cpu_data()[0] = loss / get_normalizer(normalization_, count);
+  if (top.size() == 2) {
+    top[1]->ShareData(prob_);
+  }
+
+  if (top.size() >= 3) {
+    // Output per-instance loss
+    caffe_copy(top[2]->count(), loss_data,
+      top[2]->mutable_cpu_data());
+  }
+
+  // Fix a bug, which happens when propagate_down[0] = false in backward
+  caffe_set(bottom[0]->count(), Dtype(0), bottom[0]->mutable_cpu_diff());
 }
 
 template <typename Dtype>
 void SoftmaxWithLossOHEMLayer<Dtype>::Backward_cpu(
   const vector<Blob<Dtype>*>& top, const vector<bool>& propagate_down,
   const vector<Blob<Dtype>*>& bottom) {
-  NOT_IMPLEMENTED;
+  if (propagate_down[1]) {
+    LOG(FATAL) << this->type()
+               << " Layer cannot backpropagate to label inputs.";
+  }
+  if (propagate_down[0]) {
+    Dtype* bottom_diff = bottom[0]->mutable_cpu_diff();
+    const Dtype* prob_data = prob_.cpu_data();
+    caffe_copy(prob_.count(), prob_data, bottom_diff);
+    const Dtype* label = bottom[1]->cpu_data();
+    int dim = prob_.count() / outer_num_;
+    int count = 0;
+    for (int i = 0; i < outer_num_; ++i) {
+      for (int j = 0; j < inner_num_; ++j) {
+        const int label_value = static_cast<int>(label[i * inner_num_ + j]);
+        if (has_ignore_label_ && label_value == ignore_label_) {
+          for (int c = 0; c < bottom[0]->shape(softmax_axis_); ++c) {
+            bottom_diff[i * dim + c * inner_num_ + j] = 0;
+          }
+        } else {
+          bottom_diff[i * dim + label_value * inner_num_ + j] -= 1;
+          ++count;
+        }
+      }
+    }
+    // Scale gradient
+    Dtype loss_weight = top[0]->cpu_diff()[0] /
+                        get_normalizer(normalization_, count);
+    caffe_scal(prob_.count(), loss_weight, bottom_diff);
+  }
 }
 
 #ifdef CPU_ONLY

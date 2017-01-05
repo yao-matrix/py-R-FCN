@@ -14,3 +14,5 @@ snapshot: 0
 snapshot_prefix: "resnet101_rfcn"
 iter_size: 2
 # debug_info: true
+solver_mode: CPU
+# time_info: true
