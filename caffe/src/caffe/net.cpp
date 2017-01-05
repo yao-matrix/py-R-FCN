@@ -486,11 +486,20 @@ void Net<Dtype>::CompilationRuleOne(const NetParameter& param,
         layer_param->mutable_batch_norm_param()->
         set_bias_term(scale_bias_term);
 
-        // copy scale layer params to BN layer
+        // merge scale layer params to BN layer
         for (int i = 0; i < consumer_layer_param.param_size(); i++) {
-            ParamSpec* param_spec = layer_param->add_param();
-            param_spec->set_lr_mult(consumer_layer_param.param(i).lr_mult());
-            param_spec->set_decay_mult(consumer_layer_param.param(i).decay_mult());
+            layer_param->add_param();
+        }
+
+        for (int i = layer_param->param_size() - 1;  i >= 0; i--) {
+            ParamSpec* param_spec = layer_param->mutable_param(i);
+            if (i > 1) {
+                param_spec->set_lr_mult(layer_param->param(i - 2).lr_mult());
+                param_spec->set_decay_mult(layer_param->param(i - 2).decay_mult());
+            } else {
+                param_spec->set_lr_mult(consumer_layer_param.param(i).lr_mult());
+                param_spec->set_decay_mult(consumer_layer_param.param(i).decay_mult());
+            }
         }
         // LOG(ERROR) << "layer_param size: " << layer_param->param_size();
         // LOG(ERROR) << "param lr: " << layer_param->param(4).lr_mult();
