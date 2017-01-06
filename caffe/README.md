@@ -1,12 +1,12 @@
 # Add-on Notes
-This branch of Caffe extend [Microsoft Caffe](http://github.com/Microsoft/caffe) by integrating [MKL DNN API accelerations](http://github.com/intel/caffe) and doing many extra OpenMP/Zero-Copy optimizations to make py-RFCN faster.We can get 20x acceleration compared with Vanilla CPU Caffe in Pascal-VOC RFCN end2end case in Xeon E5 2699-v4.
+This branch of Caffe extend [Microsoft Caffe](http://github.com/Microsoft/caffe) by integrating [MKL DNN API accelerations](http://github.com/intel/caffe) and doing many extra OpenMP/Zero-Copy optimizations to make py-RFCN fasterin Intel platform. We also implemented the CPU version of some layers(like PSROI, box annotator etc.). We can get 20x acceleration compared with Vanilla CPU Caffe in Pascal-VOC RFCN end2end case in Xeon E5 2699-v4.
 
 ## How to use MKL's DNN API
 1. go to ./external/mkl and run prepare_mkl.sh. Once it's done, you can see a mklml_lnx_2017.0.2.20161122 folder in ./external/mkl directory
 2. Update BLAS_INCLUDE and BLAS_LIB's absolute path part in Makefile.config
 
 ## Build
-1. make -j<core number>
+1. make -j8
 2. make pycaffe
 
 *This has been tested in CentOS 7.2, suppose no issues in Linux based OS.*
