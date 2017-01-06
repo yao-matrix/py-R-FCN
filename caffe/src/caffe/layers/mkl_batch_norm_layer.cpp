@@ -139,21 +139,20 @@ void MKLBatchNormLayer<Dtype>::Init(const vector<Blob<Dtype>*>& bottom,
   filler->Fill(this->blobs_[0].get());
 
   if (this->blobs_.size() > 1) {
-	if (bias_term_) {
-      this->blobs_[1].reset(new Blob<Dtype>(scaleshift_shape));
-      FillerParameter bias_filler_param(
-        this->layer_param_.batch_norm_param().bias_filler());
-      if (!this->layer_param_.batch_norm_param().has_bias_filler()) {
-        bias_filler_param.set_type("constant");
-        bias_filler_param.set_value(0);
-      }
-      shared_ptr<Filler<Dtype> > bias_filler(
-        GetFiller<Dtype>(bias_filler_param));
+      if (bias_term_) {
+        this->blobs_[1].reset(new Blob<Dtype>(scaleshift_shape));
+        FillerParameter bias_filler_param(
+          this->layer_param_.batch_norm_param().bias_filler());
+        if (!this->layer_param_.batch_norm_param().has_bias_filler()) {
+          bias_filler_param.set_type("constant");
+          bias_filler_param.set_value(0);
+        }
+      shared_ptr<Filler<Dtype> > bias_filler(GetFiller<Dtype>(bias_filler_param));
       bias_filler->Fill(this->blobs_[1].get());
     } else {
-		this->blobs_[1].reset(new Blob<Dtype>(scaleshift_shape));
-		caffe_set(this->blobs_[1]->count(), Dtype(0), this->blobs_[1]->mutable_cpu_data());
-	}
+      this->blobs_[1].reset(new Blob<Dtype>(scaleshift_shape));
+      caffe_set(this->blobs_[1]->count(), Dtype(0), this->blobs_[1]->mutable_cpu_data());
+    }
   }
 
   // Initialize mean, variance and moving average fraction

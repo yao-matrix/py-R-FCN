@@ -117,7 +117,7 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
   // Backward compatibility for obsolete compile-time flags
 #ifdef USE_MKL2017_AS_DEFAULT_ENGINE
   if (filtered_param.engine() == "") {
-    filtered_param.set_engine("MKL2017");
+    // filtered_param.set_engine("MKL2017");
   }
 #endif
 
@@ -163,17 +163,17 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
 	// LOG(ERROR) << "layer: " << layer_param.name() << " setup start";
     if (param.engine() != "") {
 	  // XXX: Matrix: force some convolution layers to CAFFE engine here to WR performance issue
-	  if (
-		  // !layer_param.name().compare("conv1") ||
-		  !layer_param.name().compare("rfcn_cls")
-		  // !layer_param.name().compare("res4a_branch1") ||
-		  // !layer_param.name().compare("res4a_branch2a") ||
-		  // !layer_param.name().compare("res3a_branch1") ||
-		  // !layer_param.name().compare("res3a_branch2a")
-		 ) {
-		param.mutable_layer(layer_id)->set_engine("CAFFE");
+	  if (1
+              // !layer_param.name().compare("conv1") ||
+              // !layer_param.name().compare("rfcn_cls") ||
+              // !layer_param.name().compare("res4a_branch1") ||
+              // !layer_param.name().compare("res4a_branch2a") ||
+	      // !layer_param.name().compare("res3a_branch1") ||
+              // !layer_param.name().compare("res3a_branch2a")
+             ) {
+	     param.mutable_layer(layer_id)->set_engine("CAFFE");
 	  } else {
-      	param.mutable_layer(layer_id)->set_engine(param.engine());
+             param.mutable_layer(layer_id)->set_engine(param.engine());
 	  }
 	}
 
@@ -509,6 +509,7 @@ void Net<Dtype>::CompilationRuleOne(const NetParameter& param,
     if (layers_to_drop.find(layer_param->name()) != layers_to_drop.end()) {
       LOG_IF(INFO, Caffe::root_solver()) << "Dropped layer: "
              << layer_param->name() << std::endl;
+      LOG(ERROR) << "drop layer: " << layer_param->name();
       layer_included = false;
       // Remove dropped layer from the list of layers to be dropped
       layers_to_drop.erase(layers_to_drop.find(layer_param->name()));

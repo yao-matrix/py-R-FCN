@@ -29,7 +29,7 @@ namespace caffe {
     PSROIPoolingParameter psroi_pooling_param =
       this->layer_param_.psroi_pooling_param();
     spatial_scale_ = psroi_pooling_param.spatial_scale();
-    LOG(INFO) << "Spatial scale: " << spatial_scale_;
+    LOG(ERROR) << "Spatial scale: " << spatial_scale_;
 
     CHECK_GT(psroi_pooling_param.output_dim(), 0)
       << "output_dim must be > 0";
@@ -45,9 +45,9 @@ namespace caffe {
   template <typename Dtype>
   void PSROIPoolingLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
-    // LOG(INFO)<<"psroipooling reshape";
+    // LOG(INFO) << "psroipooling reshape";
     channels_ = bottom[0]->channels();
-    CHECK_EQ(channels_, output_dim_*group_size_*group_size_)
+    CHECK_EQ(channels_, output_dim_ * group_size_ * group_size_)
       << "input channel number does not match layer parameters";
     height_ = bottom[0]->height();
     width_ = bottom[0]->width();
@@ -76,7 +76,7 @@ namespace caffe {
 	#pragma omp parallel for
 #endif
      for (int n = 0; n < num; ++n) {
-         int roi_add = n * 5;
+        int roi_add = n * 5;
         // [start, end) interval for spatial sampling
         int roi_batch_ind = bottom_rois[roi_add];
         Dtype roi_start_w =
@@ -99,17 +99,12 @@ namespace caffe {
       for (int ctop = 0; ctop < output_dim; ++ctop) {
         for (int ph = 0; ph < pooled_height; ++ph) {
           for (int pw = 0; pw < pooled_width; ++pw) {
-            int index = n*output_dim*pooled_height*pooled_width + ctop*pooled_height*pooled_width + ph*pooled_width + pw;
+            int index = n * output_dim * pooled_height * pooled_width + ctop * pooled_height * pooled_width + ph * pooled_width + pw;
             // The output is in order (n, ctop, ph, pw)
-
-            int hstart = floor(static_cast<Dtype>(ph) * bin_size_h
-                            + roi_start_h);
-            int wstart = floor(static_cast<Dtype>(pw)* bin_size_w
-                            + roi_start_w);
-            int hend = ceil(static_cast<Dtype>(ph + 1) * bin_size_h
-                          + roi_start_h);
-            int wend = ceil(static_cast<Dtype>(pw + 1) * bin_size_w
-                        + roi_start_w);
+            int hstart = floor(static_cast<Dtype>(ph) * bin_size_h + roi_start_h);
+            int wstart = floor(static_cast<Dtype>(pw) * bin_size_w + roi_start_w);
+            int hend = ceil(static_cast<Dtype>(ph + 1) * bin_size_h + roi_start_h);
+            int wend = ceil(static_cast<Dtype>(pw + 1) * bin_size_w + roi_start_w);
             // Add roi offsets and clip to input boundaries
             hstart = min(max(hstart, 0), height);
             hend = min(max(hend, 0), height);
@@ -119,24 +114,18 @@ namespace caffe {
 
             int gw = pw;
             int gh = ph;
-            int c = (ctop*group_size + gh)*group_size + gw;
+            int c = (ctop * group_size + gh) * group_size + gw;
 
-            // bottom_data += (roi_batch_ind * channels + c) * height * width;
             Dtype out_sum = 0;
             for (int h = hstart; h < hend; ++h) {
               for (int w = wstart; w < wend; ++w) {
-                int bottom_index = h*width + w;
+                int bottom_index = h * width + w;
                 out_sum += bottom_data[(roi_batch_ind * channels + c) * height * width + bottom_index];
               }
             }
 
-            Dtype bin_area = (hend - hstart)*(wend - wstart);
-            if (is_empty){
-              top_data[index] = 0;
-            }
-            else{
-               top_data[index] = out_sum/bin_area;
-            }
+            Dtype bin_area = (hend - hstart) * (wend - wstart);
+            top_data[index] = is_empty ? 0. : out_sum / bin_area;
 
             mapping_channel[index] = c;
          }
@@ -156,7 +145,7 @@ namespace caffe {
     int count = top[0]->count();
     caffe_set(count, Dtype(0), top_data);
     caffe_set(count, -1, mapping_channel_ptr);
-    // NOLINT_NEXT_LINE(whitespace/operators)
+    
     PSROIPoolingForward(bottom[1]->num(), bottom_data, spatial_scale_,
       channels_, height_, width_, pooled_height_,
       pooled_width_, bottom_rois, output_dim_, group_size_,
@@ -187,7 +176,7 @@ namespace caffe {
       int n = i / pooled_width / pooled_height / output_dim;
 
       // [start, end) interval for spatial sampling
-	  int roi_add = n * 5;
+      int roi_add = n * 5;
       int roi_batch_ind = bottom_rois[roi_add];
       Dtype roi_start_w =
         static_cast<Dtype>(round(bottom_rois[roi_add + 1])) * spatial_scale;
@@ -225,12 +214,12 @@ namespace caffe {
       int c = mapping_channel[i];
       Dtype* offset_bottom_diff = bottom_diff +
         (roi_batch_ind * channels + c) * height * width;
-      Dtype bin_area = (hend - hstart)*(wend - wstart);
+      Dtype bin_area = (hend - hstart) * (wend - wstart);
       Dtype diff_val = is_empty ? 0. : top_diff[i] / bin_area;
       for (int h = hstart; h < hend; ++h) {
         for (int w = wstart; w < wend; ++w) {
           int bottom_index = h * width + w;
-		  *(offset_bottom_diff + bottom_index) += diff_val;
+          *(offset_bottom_diff + bottom_index) += diff_val;
         }
       }
     }
@@ -240,7 +229,7 @@ namespace caffe {
   void PSROIPoolingLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
 
-      if (!propagate_down[0]) {
+    if (!propagate_down[0]) {
       return;
     }
 

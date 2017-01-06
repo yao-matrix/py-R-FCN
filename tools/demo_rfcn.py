@@ -95,6 +95,7 @@ def demo(net, image_name):
                           cls_scores[:, np.newaxis])).astype(np.float32)
         keep = nms(dets, NMS_THRESH)
         dets = dets[keep, :]
+        print dets
         vis_detections(im, cls, dets, thresh=CONF_THRESH)
 
 def parse_args():
