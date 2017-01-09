@@ -172,7 +172,7 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
               // !layer_param.name().compare("res4a_branch2a") ||
 	      // !layer_param.name().compare("res3a_branch1") ||
               // !layer_param.name().compare("res3a_branch2a")
-              !layer_param.type().compare("BatchNorm") ||
+              // !layer_param.type().compare("BatchNorm") ||
               !layer_param.type().compare("Convolution")
              ) {
 	     LOG(ERROR) << layer_param.name() << " use caffe";
@@ -468,12 +468,12 @@ void Net<Dtype>::CompilationRuleOne(const NetParameter& param,
     // and rename BatchNorm top blob after deleted Scale's top
 
     // If current layer is BatchNorm of MKL2017 engine..
-    if (0) /*((layer_param->type().compare("BatchNorm") == 0) &&
+    if ((layer_param->type().compare("BatchNorm") == 0) &&
        ((layer_param->batch_norm_param().engine() ==
          BatchNormParameter_Engine_MKL2017)
        || ((layer_param->batch_norm_param().engine() ==
            BatchNormParameter_Engine_DEFAULT) &&
-            param.engine().compare("MKL2017") == 0))) */ {
+            param.engine().compare("MKL2017") == 0))) {
       std::vector<const LayerParameter*> consumer_layer_params;
       GetBlobConsumers(consumer_layer_params,
                        layer_param->top(0),

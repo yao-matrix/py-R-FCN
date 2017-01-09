@@ -46,6 +46,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "caffe/util/performance.hpp"
 #include "mkl_service.h"
 
+#ifdef USE_MLSL
+using namespace MLSL;
+#endif
+
 static int getMKLBuildDate() {
   static int build = 0;
   if (build == 0) {
@@ -495,7 +499,8 @@ void MKLConvolutionLayer<Dtype>::Forward_cpu(
 		LOG(ERROR) << "convert layout";
 	}
     top[0]->set_prv_data_descriptor(fwd_top_data);
-    res_convolutionFwd[dnnResourceDst] = reinterpret_cast<void *>(top[0]->mutable_prv_data());
+    res_convolutionFwd[dnnResourceDst] =
+            reinterpret_cast<void *>(top[0]->mutable_prv_data());
   } else {
     res_convolutionFwd[dnnResourceDst] = top[0]->mutable_cpu_data();
   }
