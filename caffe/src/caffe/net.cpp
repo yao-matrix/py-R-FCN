@@ -662,6 +662,7 @@ void Net<Dtype>::CompilationRuleThree(const NetParameter& param,
       batch_norm_top.append("_x");
     }
 
+#if 0
     // If current layer is ReLU of MKL2017 engine..
     if (((layer_param->type().compare("ReLU") == 0) &&
         ((layer_param->relu_param().engine() ==
@@ -699,6 +700,7 @@ void Net<Dtype>::CompilationRuleThree(const NetParameter& param,
       // Modify top so it is diffrent from bottom
       relu_top.append("_xx");
     }
+#endif
 
     param_compiled->add_layer()->CopyFrom(*layer_param);
   }
