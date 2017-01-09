@@ -254,12 +254,12 @@ void MKLEltwiseLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
       case EltwiseParameter_EltwiseOp_SUM:
         CHECK_EQ(coeffs_[i], Dtype(1)) << "Not supported yet";
         if (is_top_diff_prv == false) {
-		  // option 1: copy solution
+          // option 1: copy solution
           // bottom_diff = bottom[i]->mutable_cpu_diff();
-		  // caffe_copy(count, top_diff, bottom_diff);
+          // caffe_copy(count, top_diff, bottom_diff);
 
-		  // option 2: zero-copy solution
-		  bottom[i]->ShareDiff(*top[0]);
+          // option 2: zero-copy solution
+          bottom[i]->ShareDiff(*top[0]);
         } else {
           if ((!bwd_bottom_diff[i]->layout_int) || 
 		      (bwd_bottom_diff[i]->layout_compare(top[0]->get_prv_diff_descriptor()) == false) ) {

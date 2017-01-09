@@ -381,6 +381,36 @@ void MKLConvolutionLayer<Dtype>::Init(
                                         1, bias_sizes, bias_strides);
   }
 
+#ifdef USE_MLSL
+
+  if (!this->layerOp) {
+    DataType dt = (sizeof(Dtype) == 4)? DT_FLOAT : DT_DOUBLE;
+    ComputeOpRegInfo *myRegInfo;
+    myRegInfo = new ComputeOpRegInfo(COMP_OP_TYPE_CC);
+    myRegInfo->SetName(this->layer_param_.name().c_str());
+    myRegInfo->AddInputFeatureMap(ic, iw*ih, dt);
+    myRegInfo->AddOutputFeatureMap(oc, ow*oh, dt);
+    myRegInfo->AddWeights(ic*oc/g, kw*kh, dt, DISTRIBUTED_WEIGHT_UPDATE);
+
+    if (this->bias_term_) {
+      myRegInfo->AddWeights(oc, 1, dt, false /* no make sense to do distributed update for bias */);
+    }
+
+    myRegInfo->Validate();
+    this->layerOp = new ComputeOp(myRegInfo, caffe::internode::data_parallelism);
+    delete myRegInfo;
+
+    for (int idx = 0; idx < this->blobs_.size(); idx++) {
+      LOG_LAYER(this) << "LayerSetUp: this->blobs_[idx]->count() " << this->blobs_[idx]->count();
+      LOG_LAYER(this) << "LayerSetUp: wt idx " << idx
+                      << ", local weight len " << this->layerOp->GetWeights(idx)->LocalLen() * this->layerOp->GetWeights(idx)->WTSize()
+                      << ", owned weight len " << this->layerOp->GetWeights(idx)->OwnedLen() * this->layerOp->GetWeights(idx)->WTSize()
+                      << ", wtsize " << this->layerOp->GetWeights(idx)->WTSize();
+    }
+  }
+
+#endif /* USE_MLSL */
+
   if (need_log) {
 	  elapsed = timer.MicroSeconds();
 	  LOG(ERROR) << "create backward bias: " << elapsed / 1000. << " ms";
@@ -434,6 +464,50 @@ void MKLConvolutionLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
   }
   */
 }
+
+#ifdef USE_MLSL
+
+template <typename Dtype>
+void MKLConvolutionLayer<Dtype>::pack_buffer(FeatureMap *fm, Dtype *to, const Dtype *from) {
+      for (int i = 0; i < fm->NumPackBlocks(); i++) {
+          BlockInfo * bi = fm->GetPackBlock(i);
+          int bMBLen = bi->MBLen();
+          int bMBStart = bi->MBStart();
+          int bFMLen = bi->FMLen();
+          int bFMStart = bi->FMStart();
+          Dtype *src = (Dtype*) from;
+          Dtype *dst = (Dtype*) (to + bi->BufOffset());
+          for (int mb = 0; mb < bMBLen; mb++) {
+              for (int fm = 0; fm < bFMLen; fm++) {
+                  for (int s = 0 ; s < bi->FMSize(); s++) {
+                    dst[(fm*bMBLen + mb)*bi->FMSize() + s] = src[s*bFMLen*bMBLen + (bFMStart+fm)*bMBLen + (bMBStart+mb)];
+                  }
+              }
+          }
+      }
+  }
+
+template <typename Dtype>
+void MKLConvolutionLayer<Dtype>::unpack_buffer(FeatureMap *fm, const Dtype *from, Dtype *to) {
+      for (int i = 0; i < fm->NumUnpackBlocks(); i++) {
+          BlockInfo * bi = fm->GetUnpackBlock(i);
+          int bMBLen = bi->MBLen();
+          int bMBStart = bi->MBStart();
+          int bFMLen = bi->FMLen();
+          int bFMStart = bi->FMStart();
+          Dtype *dst = (Dtype*) to;
+          Dtype *src = (Dtype*) (from + bi->BufOffset());
+          for (int mb = 0; mb < bMBLen; mb++) {
+              for (int fm = 0; fm < bFMLen; fm++) {
+                  for (int s = 0 ; s < bi->FMSize(); s++) {
+                    dst[s*bFMLen*bMBLen + (bFMStart+fm)*bMBLen + (bMBStart+mb)] = src[(fm*bMBLen + mb)*bi->FMSize() + s];
+                  }
+              }
+          }
+      }
+}
+
+#endif /* USE_MLSL */
 
 template <typename Dtype>
 void MKLConvolutionLayer<Dtype>::Forward_cpu(

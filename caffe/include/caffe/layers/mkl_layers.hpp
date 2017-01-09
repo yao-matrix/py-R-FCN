@@ -86,6 +86,14 @@ class MKLConvolutionLayer : public ConvolutionLayer<Dtype> {
           const vector<Blob<Dtype>*>& top);
 
  private:
+
+
+#ifdef USE_MLSL
+  virtual void pack_buffer(MLSL::FeatureMap *fm, Dtype *to, const Dtype *from);
+  virtual void unpack_buffer(MLSL::FeatureMap *fm, const Dtype *from, Dtype *to);
+#endif /* USE_MLSL */
+
+
   /* Fwd step */
   shared_ptr<MKLData<Dtype> > fwd_bottom_data, fwd_top_data, fwd_filter_data,
                                  fwd_bias_data;
@@ -124,6 +132,8 @@ class MKLConvolutionLayer : public ConvolutionLayer<Dtype> {
          stride_h_;
   int    pad_w_,
          pad_h_;
+
+  bool bprop_unpack_called;
 };
 
 
@@ -152,6 +162,11 @@ class MKLLRNLayer : public Layer<Dtype> {
   virtual inline const char* type() const { return "LRN"; }
   virtual inline int ExactNumBottomBlobs() const { return 1; }
   virtual inline int ExactNumTopBlobs() const { return 1; }
+
+#ifdef USE_MLSL
+  virtual void pack_buffer(MLSL::FeatureMap *fm, Dtype *to, const Dtype *from);
+  virtual void unpack_buffer(MLSL::FeatureMap *fm, const Dtype *from, Dtype *to);
+#endif
 
  protected:
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
@@ -226,6 +241,11 @@ class MKLPoolingLayer : public Layer<Dtype> {
             PoolingParameter_PoolMethod_MAX) ? 2 : 1;
   }
 
+#ifdef USE_MLSL
+  virtual void pack_buffer(MLSL::FeatureMap *fm, Dtype *to, const Dtype *from);
+  virtual void unpack_buffer(MLSL::FeatureMap *fm, const Dtype *from, Dtype *to);
+#endif /* USE_MLSL */
+
  protected:
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
                            const vector<Blob<Dtype>*>& top);
@@ -289,6 +309,16 @@ class MKLReLULayer : public NeuronLayer<Dtype> {
 
   virtual inline const char* type() const { return "ReLU"; }
 
+#ifdef USE_MLSL
+  virtual void pack_buffer(MLSL::FeatureMap *fm, Dtype *to, const Dtype *from);
+  virtual void unpack_buffer(MLSL::FeatureMap *fm, const Dtype *from, Dtype *to);
+
+#ifdef CAFFE_MLSL_OWN_BUFFERS
+  virtual void out_layout(MLSL::FeatureMap *fm, Dtype *to, const Dtype *from);
+  virtual void in_layout(MLSL::FeatureMap *fm, const Dtype *from, Dtype *to);
+#endif
+#endif /* USE_MLSL */
+
  protected:
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
                            const vector<Blob<Dtype>*>& top);
@@ -328,6 +358,11 @@ class MKLConcatLayer : public Layer<Dtype> {
                        const vector<Blob<Dtype>*>& top);
   virtual inline const char* type() const { return "Concat"; }
   ~MKLConcatLayer();
+
+#ifdef USE_MLSL
+  virtual void pack_buffer(MLSL::FeatureMap *fm, Dtype *to, const Dtype *from);
+  virtual void unpack_buffer(MLSL::FeatureMap *fm, const Dtype *from, Dtype *to);
+#endif
 
  protected:
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
@@ -372,11 +407,12 @@ class MKLBatchNormLayer : public Layer<Dtype> {
         bwd_bottom_diff(new MKLDiff<Dtype>()),
         batchNormFwd(static_cast<dnnPrimitive_t>(NULL)),
         batchNormBwd(static_cast<dnnPrimitive_t>(NULL)),
+	batchNormBwdScaleShift(static_cast<dnnPrimitive_t>(NULL)),
         scaleShift_buffer_(static_cast<Dtype*>(NULL)),
         scaleShift_diff_(static_cast<Dtype*>(NULL)),
+        workspace_buffer_(static_cast<Dtype*>(NULL)),
         layout_usr_(static_cast<dnnLayout_t>(NULL)),
-        blobs_initialized_(false) {
-		}
+        blobs_initialized_(false) {}
 
   virtual ~MKLBatchNormLayer();
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
@@ -416,9 +452,10 @@ class MKLBatchNormLayer : public Layer<Dtype> {
   shared_ptr<MKLDiff<Dtype> > bwd_top_diff;
   shared_ptr<MKLDiff<Dtype> > bwd_bottom_diff;
   Blob<Dtype> temp_;
-  dnnPrimitive_t batchNormFwd, batchNormBwd;
+  dnnPrimitive_t batchNormFwd, batchNormBwd, batchNormBwdScaleShift;
   Dtype *scaleShift_buffer_;
   Dtype *scaleShift_diff_;
+  Dtype *workspace_buffer_;
   dnnLayout_t layout_usr_;
 
   bool use_global_stats_;

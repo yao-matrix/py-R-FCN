@@ -174,6 +174,7 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
               // !layer_param.name().compare("res3a_branch2a")
               // !layer_param.type().compare("BatchNorm") ||
               !layer_param.type().compare("Convolution")
+              // !layer_param.type().compare("Pooling")
              ) {
 	     LOG(ERROR) << layer_param.name() << " use caffe";
 	     param.mutable_layer(layer_id)->set_engine("CAFFE");
@@ -246,7 +247,7 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
             << layer_param.name();
       }
     } else {
-      LOG(ERROR) << "Set up with engine: " << layer_param.engine();
+      // LOG(ERROR) << "Set up " << layer_param.name() << " with engine: " << layer_param.engine();
       layers_[layer_id]->SetUp(bottom_vecs_[layer_id], top_vecs_[layer_id]);
     }
     LOG_IF(INFO, Caffe::root_solver())
@@ -527,7 +528,7 @@ void Net<Dtype>::CompilationRuleOne(const NetParameter& param,
     if (layers_to_drop.find(layer_param->name()) != layers_to_drop.end()) {
       LOG_IF(INFO, Caffe::root_solver()) << "Dropped layer: "
              << layer_param->name() << std::endl;
-      LOG(ERROR) << "drop layer: " << layer_param->name();
+      // LOG(ERROR) << "drop layer: " << layer_param->name();
       layer_included = false;
       // Remove dropped layer from the list of layers to be dropped
       layers_to_drop.erase(layers_to_drop.find(layer_param->name()));
@@ -568,7 +569,7 @@ void Net<Dtype>::CompilationRuleTwo(const NetParameter& param,
                                     consumer_layer_params.size() > 0 ?
                                     *(consumer_layer_params[0]) : *layer_param;
 
-      // Consumer lauyer of blob produced by Conv
+      // Consumer layer of blob produced by Conv
       // has to be ReLU layer with one Input Blob
       if ((consumer_layer_param.type().compare("ReLU") == 0) &&
         ((consumer_layer_param.relu_param().engine() ==

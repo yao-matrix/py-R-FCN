@@ -198,6 +198,7 @@ void MKLMemoryDescriptorBase<Dtype>::convert_from_prv(void* cpu_ptr) {
   PERFORMANCE_MEASUREMENT_BEGIN();
   status = dnnExecute<Dtype>(this->convert_from_int, convert_resources);
   PERFORMANCE_MEASUREMENT_END_STATIC("mkl_conversion");
+  // LOG(ERROR) << "convert buffer from prv to cpu done";
 
   CHECK_EQ(status, 0) << "Conversion from prv failed with status " << status;
 }
