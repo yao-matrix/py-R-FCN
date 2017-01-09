@@ -69,7 +69,7 @@ void ConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
 
   // LOG(ERROR) << "input: [" << bottom[0]->num() << ", " << bottom[0]->channels() << ", " << bottom[0]->height() << ", " << bottom[0]->width() << "]";
-  // LOG(ERROR) << "output: [" << this->num_ << ", " << this->channels_ << "]";
+  // LOG(ERROR) << "output: [" << top[0]->num() << ", " << top[0]->channels() << ", " << top[0]->height() << ", " << top[0]->width() << "]";
   // LOG(ERROR) << "filter: [" << this->kernel_shape_.cpu_data()[0] << ", " << this->kernel_shape_.cpu_data()[1] << "]";
   // LOG(ERROR) << "stride: [" << this->stride_.cpu_data()[0] << ", " << this->stride_.cpu_data()[1] << "]";
   // LOG(ERROR) << "dilation: [" << this->dilation_.cpu_data()[0] << ", " << this->dilation_.cpu_data()[1] << "]";
@@ -103,7 +103,29 @@ void ConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       }
       // LOG(ERROR) << "forward GEMM takes: " << timer2.MicroSeconds() / 1000. << " ms";
   }
- 
+
+  // dump conv output
+#if 0
+  static int cnt = 0;
+  if (cnt == 0) {
+    FILE *fp = fopen("./conv1_cpu.txt", "wb");
+    const Dtype* top_data = top[0]->cpu_data();
+    int i = 0;
+    for (int n = 0; n < top[0]->num(); n++) {
+      for (int c = 0; c < 1; c++) {
+        for (int h = 0; h < top[0]->height(); h++) {
+          for (int w = 0; w < top[0]->width(); w++) {
+            fprintf(fp, "%.2f, ", top_data[i]);
+            i++;
+          }
+        }
+      }
+    }
+   fclose(fp);
+  }
+  cnt++;
+#endif
+
   // LOG(ERROR) << "forward total takes: " << timer.MicroSeconds() / 1000. << " ms";
 }
 

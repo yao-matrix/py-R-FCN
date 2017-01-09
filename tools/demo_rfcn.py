@@ -75,6 +75,7 @@ def demo(net, image_name):
     # Load the demo image
     im_file = os.path.join(cfg.DATA_DIR, 'demo', image_name)
     im = cv2.imread(im_file)
+    # print im.shape
 
     # Detect all object classes and regress object bounds
     timer = Timer()
@@ -141,12 +142,13 @@ if __name__ == '__main__':
     time.sleep(5)
 
     # Warmup on a dummy image
-    im = 128 * np.ones((300, 500, 3), dtype=np.uint8)
+    im = 128 * np.ones((375, 500, 3), dtype=np.uint8)
+    # im = 128 * np.ones((300, 500, 3), dtype=np.uint8)
     print '\n dummy image generation done' 
     for i in xrange(2):
-        # print '\n start object detection'
-        _, _= im_detect(net, im)
-        # print '\n object detection done'
+      print '\n start object detection'
+      _, _= im_detect(net, im)
+      print '\n object detection done'
 
     im_names = ['000456.jpg', '000542.jpg', '001150.jpg',
                 '001763.jpg', '004545.jpg']

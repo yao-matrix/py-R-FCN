@@ -87,8 +87,9 @@ MKLConvolutionLayer<Dtype>::MKLConvolutionLayer(
         convolutionBwdBias(static_cast<dnnPrimitive_t>(NULL)),
         bwdf_filter_diff_iter(new MKLDiff<Dtype>()),
         bwdb_bias_diff_iter(new MKLDiff<Dtype>()) {
-			layer_name = param.name();
-		}
+          layer_name = param.name();
+          reinit_times = 0;
+        }
 
 template <typename Dtype>
 void MKLConvolutionLayer<Dtype>::compute_output_shape() {
@@ -432,8 +433,7 @@ void MKLConvolutionLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
   bool reinitialize = (this->width_ == bottom[0]->width() &&
                        this->height_ == bottom[0]->height() &&
                        this->channels_ == bottom[0]->channels() &&
-                       this->num_ == bottom[0]->num()) ? false : true;
- 
+                       this->num_ == bottom[0]->num()) ? false : true; 
 
   // bool need_log = !layer_name.compare("conv1") || !layer_name.compare("rfcn_cls");
   bool need_log = false;
@@ -452,15 +452,19 @@ void MKLConvolutionLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
   }
   */
   if (reinitialize == true) {
-	if (need_log) {
-		LOG(ERROR) << "re-initialize";
-	}
+    if (reinit_times >= 1) {
+      LOG(FATAL) << "Pls use same size image input for performace seek";
+    }
+    if (need_log) {
+      LOG(ERROR) << "re-initialize";
+    }
     Init(bottom, top);
+    reinit_times++;
   }
   /*
   if (need_log) {
-	  double elapsed = timer.MicroSeconds();
-	  LOG(ERROR) << "Reshape time: " << elapsed / 1000. << " ms";
+     double elapsed = timer.MicroSeconds();
+     LOG(ERROR) << "Reshape time: " << elapsed / 1000. << " ms";
   }
   */
 }
@@ -588,6 +592,29 @@ void MKLConvolutionLayer<Dtype>::Forward_cpu(
 
   status = dnnExecute<Dtype>(convolutionFwd, res_convolutionFwd);
   CHECK_EQ(status, 0) << "Forward convolution failed with status " << status;
+
+  // dump conv output
+#if 0
+  static int cnt = 0;
+  if (cnt == 0) {
+    FILE *fp = fopen("./conv1_mkl.txt", "wb");
+    const Dtype* top_data = top[0]->cpu_data();
+    int i = 0;
+    for (int n = 0; n < top[0]->num(); n++) {
+      for (int c = 0; c < 1; c++) {
+        for (int h = 0; h < top[0]->height(); h++) {
+          for (int w = 0; w < top[0]->width(); w++) {
+            fprintf(fp, "%.2f, ", top_data[i]);
+            i++;
+          }
+        }
+      }
+    }
+   fclose(fp);
+  }
+  cnt++;
+#endif
+
 
   if (need_log) {
     elapsed = timer.MicroSeconds();

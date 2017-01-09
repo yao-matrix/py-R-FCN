@@ -134,6 +134,7 @@ class MKLConvolutionLayer : public ConvolutionLayer<Dtype> {
          pad_h_;
 
   bool bprop_unpack_called;
+  int reinit_times;
 };
 
 

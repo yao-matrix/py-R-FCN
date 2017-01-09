@@ -247,7 +247,7 @@ void MKLBatchNormLayer<Dtype>::Forward_cpu(
       CHECK_EQ(e, E_SUCCESS);
     }
   } else {
-    LOG(ERROR) << "Using cpu_data in " << this->layer_param_.name();
+    // LOG(ERROR) << "Using cpu_data in " << this->layer_param_.name();
     if (batchNormFwd == NULL) {
       // First pass
       is_first_pass = 1;
