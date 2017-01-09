@@ -78,7 +78,7 @@ class Layer {
     : layer_param_(param), is_shared_(false) {
       // Set phase and copy blobs (if there are any).
       phase_ = param.phase();
-	  // LOG(ERROR) << "layer construction with blobs size: " << layer_param_.blobs_size();
+      // LOG(ERROR) << "layer " << layer_param_.name() << " construction with blobs size: " << layer_param_.blobs_size();
       if (layer_param_.blobs_size() > 0) {
         blobs_.resize(layer_param_.blobs_size());
         for (int i = 0; i < layer_param_.blobs_size(); ++i) {

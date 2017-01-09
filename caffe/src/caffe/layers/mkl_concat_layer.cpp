@@ -40,6 +40,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "caffe/layer.hpp"
 #include "caffe/layers/mkl_layers.hpp"
+#include "caffe/util/performance.hpp"
 
 namespace caffe {
 

@@ -122,6 +122,7 @@ void MKLBatchNormLayer<Dtype>::Init(const vector<Blob<Dtype>*>& bottom,
   } else if (use_weight_bias_) {
       flags_ = (dnnBatchNormalizationFlag_t)dnnUseScaleShift;
   }
+  // LOG(ERROR) << "blob size to 5";
   this->blobs_.resize(5);
 
   // Initialize scale and shift

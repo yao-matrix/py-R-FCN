@@ -95,7 +95,7 @@ def demo(net, image_name):
                           cls_scores[:, np.newaxis])).astype(np.float32)
         keep = nms(dets, NMS_THRESH)
         dets = dets[keep, :]
-        print dets
+        # print dets
         vis_detections(im, cls, dets, thresh=CONF_THRESH)
 
 def parse_args():
@@ -132,21 +132,22 @@ if __name__ == '__main__':
         caffe.set_mode_gpu()
         caffe.set_device(args.gpu_id)
         cfg.GPU_ID = args.gpu_id
+
+    print(prototxt)
     net = caffe.Net(prototxt, caffemodel, caffe.TEST)
 
     print '\n\nLoaded network {:s}'.format(caffemodel)
     import time
-    print '\nStart'
     time.sleep(5)
-    print '\nEnd' 
 
     # Warmup on a dummy image
     im = 128 * np.ones((300, 500, 3), dtype=np.uint8)
-    print '\n after im' 
+    print '\n dummy image generation done' 
     for i in xrange(2):
-        print '\n before im detect'
+        # print '\n start object detection'
         _, _= im_detect(net, im)
-        # print '\n after im detect'
+        # print '\n object detection done'
+
     im_names = ['000456.jpg', '000542.jpg', '001150.jpg',
                 '001763.jpg', '004545.jpg']
     for im_name in im_names:

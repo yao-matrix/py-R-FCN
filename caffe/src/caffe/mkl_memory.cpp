@@ -36,6 +36,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 #ifdef MKL2017_SUPPORTED
+#include "caffe/util/performance.hpp"
+
 #include "caffe/mkl_memory.hpp"
 
 // Uncomment to see where the layout conversions are done
@@ -70,14 +72,14 @@ template <typename Dtype>
 void MKLMemoryDescriptorBase<Dtype>::remove_conversions() {
   int status;
   if (this->convert_from_int) {
-    // DLOG(INFO) << "convert_from_int layout already created, recreating for"
-      //     << this->name;
+    DLOG(INFO) << "convert_from_int layout already created, recreating for"
+           << this->name;
     status = dnnDelete<Dtype>(this->convert_from_int);
     CHECK_EQ(status, E_SUCCESS);
   }
   if (this->convert_to_int) {
-    // DLOG(INFO) << "convert_to_int layout already created, recreating for"
-       //    << this->name;
+    DLOG(INFO) << "convert_to_int layout already created, recreating for"
+           << this->name;
     status = dnnDelete<Dtype>(this->convert_to_int);
     CHECK_EQ(status, E_SUCCESS);
   }
@@ -129,8 +131,8 @@ template <typename Dtype>
 void MKLMemoryDescriptorBase<Dtype>::remove_internal_layout() {
   int status;
   if (this->layout_int) {
-    // DLOG(INFO) << "Internal layout already created, recreating for"
-      //     << this->name;
+    DLOG(INFO) << "Internal layout already created, recreating for"
+           << this->name;
     status = dnnLayoutDelete<Dtype>(this->layout_int);
     CHECK_EQ(status, E_SUCCESS);
 
@@ -146,8 +148,8 @@ template <typename Dtype>
 void MKLMemoryDescriptorBase<Dtype>::remove_user_layout() {
   int status;
   if (this->layout_usr) {
-    // DLOG(INFO) << "Internal layout already created, recreating for"
-      //     << this->name;
+    DLOG(INFO) << "Internal layout already created, recreating for"
+           << this->name;
     status = dnnLayoutDelete<Dtype>(this->layout_usr);
     CHECK_EQ(status, E_SUCCESS);
 
@@ -167,8 +169,8 @@ void MKLMemoryDescriptorBase<Dtype>::create_layouts(
   // (in terms of size) layouts we need to destroy existing layouts here
 
   if (this->layout_usr) {
-    // DLOG(INFO) << "User layout already created, recreating for"
-      //         << this->name;
+    DLOG(INFO) << "User layout already created, recreating for"
+               << this->name;
     int status = dnnLayoutDelete<Dtype>(this->layout_usr);
     CHECK_EQ(status, E_SUCCESS);
   }
@@ -188,11 +190,15 @@ void MKLMemoryDescriptorBase<Dtype>::convert_from_prv(void* cpu_ptr) {
   int status;
   void *convert_resources[dnnResourceNumber];
 
-  // DLOG(INFO) << "convert priv =>           "  << this->name << " =>";
+  DLOG(INFO) << "convert priv =>           "  << this->name << " =>";
 
   convert_resources[dnnResourceFrom] = this->prv_ptr();
   convert_resources[dnnResourceTo]   = cpu_ptr;
+
+  PERFORMANCE_MEASUREMENT_BEGIN();
   status = dnnExecute<Dtype>(this->convert_from_int, convert_resources);
+  PERFORMANCE_MEASUREMENT_END_STATIC("mkl_conversion");
+
   CHECK_EQ(status, 0) << "Conversion from prv failed with status " << status;
 }
 
@@ -203,12 +209,16 @@ void MKLMemoryDescriptorBase<Dtype>::convert_to_prv(void* cpu_ptr) {
   int status;
   void *convert_resources[dnnResourceNumber];
 
-  // DLOG(INFO) << "convert      => priv                                => "
-    //         << this->name;
+  DLOG(INFO) << "convert      => priv                                => "
+             << this->name;
 
   convert_resources[dnnResourceFrom] = cpu_ptr;
   convert_resources[dnnResourceTo]   = this->prv_ptr();
+
+  PERFORMANCE_MEASUREMENT_BEGIN();
   status = dnnExecute<Dtype>(this->convert_to_int, convert_resources);
+  PERFORMANCE_MEASUREMENT_END_STATIC("mkl_conversion");
+
   CHECK_EQ(status, 0) << "Conversion from prv failed with status " << status;
 }
 
@@ -237,8 +247,8 @@ void MKLMemoryDescriptorBase<Dtype>::convert_from_other(
       boost::static_pointer_cast<MKLMemoryDescriptorBase<Dtype> >
             (other);
 
-  // DLOG(INFO) << "convert other => priv     "  << other_descr->name
-    //         << " => " << this->name;
+  DLOG(INFO) << "convert other => priv     "  << other_descr->name
+             << " => " << this->name;
 
   int status;
   dnnPrimitive_t convert;
@@ -249,7 +259,11 @@ void MKLMemoryDescriptorBase<Dtype>::convert_from_other(
   void *convert_resources[dnnResourceNumber];
   convert_resources[dnnResourceFrom] = other_descr->prv_ptr();
   convert_resources[dnnResourceTo]   = this->prv_ptr();
+
+  PERFORMANCE_MEASUREMENT_BEGIN();
   status = dnnExecute<Dtype>(convert, convert_resources);
+  PERFORMANCE_MEASUREMENT_END_STATIC("mkl_conversion");
+
   CHECK_EQ(status, 0) << "Conversion from other failed with status "
                       << status;
 
@@ -269,8 +283,8 @@ Dtype* MKLMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
         // hack for reusing previously done conversion
         // if(dnnLayoutCompare(converted_in_fwd->layout_int , this->layout_int))
         if (1) {
-        //  DLOG(INFO) << "reusing fwd               "
-          //        << converted_in_fwd->name << " == " << this->name;
+          DLOG(INFO) << "reusing fwd               "
+                  << converted_in_fwd->name << " == " << this->name;
           return converted_in_fwd->internal_ptr;
         } else {
           DLOG(INFO) << "layout doesn't match      "
@@ -278,8 +292,8 @@ Dtype* MKLMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
         }
       }
 
-      // DLOG(INFO) << "convert      => priv                                => "
-      //         << this->name;
+      DLOG(INFO) << "convert      => priv                                => "
+                 << this->name;
 
       this->allocate();
       convert_resources[dnnResourceFrom] =
@@ -289,7 +303,10 @@ Dtype* MKLMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
       convert_resources[dnnResourceTo] =
               reinterpret_cast<void *>(this->internal_ptr);
 
+      PERFORMANCE_MEASUREMENT_BEGIN();
       status = dnnExecute<Dtype>(this->convert_to_int, convert_resources);
+      PERFORMANCE_MEASUREMENT_END_STATIC("mkl_conversion");
+
       CHECK_EQ(status, 0) << "Conversion failed with status " << status;
 
       if (set_prv_ptr) {
@@ -321,16 +338,16 @@ Dtype* MKLMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
           // hack for reusing previously done conversion
           // if(dnnLayoutCompare(converted_in_fwd->layout_int,this->layout_int))
           if (1) {
-            // DLOG(INFO) << "reusing fwd               "
-              //      << converted_in_fwd->name << " == " << this->name;
+            DLOG(INFO) << "reusing fwd               "
+                    << converted_in_fwd->name << " == " << this->name;
             return converted_in_fwd->internal_ptr;
           } else {
             DLOG(INFO) << "layout doesn't match      "
                     << converted_in_fwd->name << " != " << this->name;
           }
         }
-        // DLOG(INFO) << "convert priv => priv      "
-          //      << current_descr->name << " => " << this->name;
+        DLOG(INFO) << "convert priv => priv      "
+                << current_descr->name << " => " << this->name;
 
         if (this->convert_prv2prv) {
           CHECK_EQ(dnnLayoutCompare<Dtype>(
@@ -347,7 +364,8 @@ Dtype* MKLMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
 
         if (status != 0) {
           // TODO: Very weird that we end up here for conv1. No idea why....
-          DLOG(INFO) << "!!!! Failed creation convert_prv2prv with status " << status << "\n";
+          DLOG(INFO) << "!!!! Failed creation convert_prv2prv with status "
+                  << status << "\n";
 
           this->allocate();
           convert_resources[dnnResourceFrom] = is_diff ?
@@ -356,7 +374,10 @@ Dtype* MKLMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
           convert_resources[dnnResourceTo] =
             reinterpret_cast<void*>(this->internal_ptr);
 
+          PERFORMANCE_MEASUREMENT_BEGIN();
           status = dnnExecute<Dtype>(this->convert_to_int, convert_resources);
+          PERFORMANCE_MEASUREMENT_END_STATIC("mkl_conversion");
+
           CHECK_EQ(status, 0) << "Conversion failed with status " << status;
 
         } else {
@@ -367,7 +388,11 @@ Dtype* MKLMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
             reinterpret_cast<void *>(const_cast<Dtype *>(blob->prv_data()));
           convert_resources[dnnResourceTo] =
                   reinterpret_cast<void *>(this->internal_ptr);
+
+          PERFORMANCE_MEASUREMENT_BEGIN();
           status = dnnExecute<Dtype>(this->convert_prv2prv, convert_resources);
+          PERFORMANCE_MEASUREMENT_END_STATIC("mkl_conversion");
+
           CHECK_EQ(status, 0) << "Conversion failed with status " << status;
         }
 
@@ -379,7 +404,8 @@ Dtype* MKLMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
         }
         return this->internal_ptr;
       } else if (current_descr.get() != this) {
-          // DLOG(INFO) << "layout OK                 " << current_descr->name << " == " << this->name;
+        DLOG(INFO) << "layout OK                 "
+                << current_descr->name << " == " << this->name;
       }
     }
 

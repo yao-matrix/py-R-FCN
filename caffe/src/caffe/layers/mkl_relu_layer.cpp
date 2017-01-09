@@ -40,6 +40,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 
 #include "caffe/layers/mkl_layers.hpp"
+#include "caffe/util/performance.hpp"
 
 namespace caffe {
 template <typename Dtype>
@@ -88,7 +89,7 @@ void MKLReLULayer<Dtype>::Init(
 template <typename Dtype>
 void MKLReLULayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
-//  CHECK_EQ(top[0]->shape(), bottom[0]->shape());
+    // CHECK_EQ(top[0]->shape(), bottom[0]->shape());
     Init(bottom, top);
 }
 

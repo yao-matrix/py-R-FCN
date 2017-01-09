@@ -43,6 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "caffe/filler.hpp"
 #include "caffe/layer.hpp"
 #include "caffe/layers/mkl_layers.hpp"
+#include "caffe/util/performance.hpp"
 #include "mkl_service.h"
 
 static int getMKLBuildDate() {
