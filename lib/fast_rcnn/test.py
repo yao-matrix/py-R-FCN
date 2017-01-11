@@ -16,6 +16,7 @@ import cv2
 import caffe
 from fast_rcnn.nms_wrapper import nms
 import cPickle
+import gzip
 from utils.blob import im_list_to_blob
 import os
 
@@ -253,7 +254,13 @@ def test_net(net, imdb, max_per_image=400, thresh=-np.inf, vis=False):
             # ground truth.
             box_proposals = roidb[i]['boxes'][roidb[i]['gt_classes'] == 0]
 
-        im = cv2.imread(imdb.image_path_at(i))
+        im = None
+        if cfg.TEST.FORMAT == "pickle":
+            f = gzip.open(imdb.image_path_at(i), 'rb')
+            im = cPickle.load(f)
+            f.close()
+        else:
+            im = cv2.imread(imdb.image_path_at(i))
         _t['im_detect'].tic()
         scores, boxes = im_detect(net, im, box_proposals)
         _t['im_detect'].toc()

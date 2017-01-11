@@ -106,7 +106,13 @@ def imdb_proposals(net, imdb):
     _t = Timer()
     imdb_boxes = [[] for _ in xrange(imdb.num_images)]
     for i in xrange(imdb.num_images):
-        im = cv2.imread(imdb.image_path_at(i))
+        im = None
+        if cfg.TRAIN.FORMAT == 'pickle':
+            with open(imdb.image_path_at(i), 'rb') as f:
+                im = cPickle.load(f)
+        else:
+            im = cv2.imread(imdb.image_path_at(i))
+
         _t.tic()
         imdb_boxes[i], scores = im_proposals(net, im)
         _t.toc()
@@ -149,7 +155,13 @@ def imdb_rpn_compute_stats(net, imdb, anchor_scales=(8,16,32),
     for i in xrange(len(roidb)):
         if not i % 5000:
             print 'computing %d/%d' % (i, imdb.num_images)
-        im = cv2.imread(roidb[i]['image'])
+        im = None
+        if cfg.TRAIN.FORMAT == 'pickle':
+            with open(roidb[i]['image'], 'rb') as f:
+                im = cPickle.load(f)
+        else:
+            im = cv2.imread(roidb[i]['image'])
+
         im_data, im_info = _get_image_blob(im)
         gt_boxes = roidb[i]['boxes']
         gt_boxes = gt_boxes * im_info[0, 2]

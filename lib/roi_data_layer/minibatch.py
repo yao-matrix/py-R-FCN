@@ -10,6 +10,8 @@
 import numpy as np
 import numpy.random as npr
 import cv2
+import cPickle
+import gzip
 from fast_rcnn.config import cfg
 from utils.blob import prep_im_for_blob, im_list_to_blob
 
@@ -136,7 +138,12 @@ def _get_image_blob(roidb, scale_inds):
     processed_ims = []
     im_scales = []
     for i in xrange(num_images):
-        im = cv2.imread(roidb[i]['image'])
+        im = None
+        if cfg.TRAIN.FORMAT == "pickle":
+            with gzip(roidb[i][image], 'rb') as f:
+                im = cPickle.load(f)
+        else:
+            im = cv2.imread(roidb[i]['image'])
         if roidb[i]['flipped']:
             im = im[:, ::-1, :]
         target_size = cfg.TRAIN.SCALES[scale_inds[i]]

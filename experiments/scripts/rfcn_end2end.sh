@@ -38,6 +38,15 @@ case $DATASET in
     PT_DIR="coco"
     ITERS=960000
     ;;
+  luna)
+    # This is a very long and slow training schedule
+    # You can probably use fewer iterations and reduce the
+    # time to the LR drop (set in the solver to 350,000 iterations).
+    TRAIN_IMDB="luna_2016_train"
+    TEST_IMDB="luna_2016_val"
+    PT_DIR="luna"
+    ITERS=960000
+    ;;
   *)
     echo "No dataset given"
     exit

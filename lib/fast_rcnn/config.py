@@ -38,7 +38,7 @@ __C.TRAIN = edict()
 __C.TRAIN.SCALES = (600,)
 
 # pickle or image
-__C.TRAIN.FORMAT = 'pickle'
+__C.TRAIN.FORMAT = '' # 'pickle'
 
 # Max pixel size of the longest side of a scaled input image
 __C.TRAIN.MAX_SIZE = 1000
@@ -144,7 +144,7 @@ __C.TEST = edict()
 __C.TEST.SCALES = (600,)
 
 # pickle or image
-__C.TEST.FORMAT = 'pickle'
+__C.TEST.FORMAT = '' # 'pickle'
 
 # Max pixel size of the longest side of a scaled input image
 __C.TEST.MAX_SIZE = 1000
