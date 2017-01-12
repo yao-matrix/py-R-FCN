@@ -89,6 +89,7 @@ MKLConvolutionLayer<Dtype>::MKLConvolutionLayer(
         bwdb_bias_diff_iter(new MKLDiff<Dtype>()) {
           layer_name = param.name();
           reinit_times = 0;
+          LOG(ERROR) << layer_name << " MKL";
         }
 
 template <typename Dtype>
@@ -192,15 +193,15 @@ void MKLConvolutionLayer<Dtype>::Init(
   double elapsed;
 
   if (need_log) {
-	  timer.Start();
+        timer.Start();
   }
   // Free MKL primitives
   dnnDelete<Dtype>(convolutionFwd);
   if (need_log) {
-	  elapsed = timer.MicroSeconds();
-	  LOG(ERROR) << "delete primitives: " << elapsed / 1000.0 << " ms";
-	  LOG(ERROR) << "bias term: " << this->bias_term_;
-	  timer.Start();
+        elapsed = timer.MicroSeconds();
+        LOG(ERROR) << "delete primitives: " << elapsed / 1000.0 << " ms";
+        LOG(ERROR) << "bias term: " << this->bias_term_;
+         timer.Start();
   }
 
   if (this->bias_term_) {
@@ -231,9 +232,9 @@ void MKLConvolutionLayer<Dtype>::Init(
       dnnBorderZeros);
   }
   if (need_log) {
-	  elapsed = timer.MicroSeconds();
-	  LOG(ERROR) << "create forward: " << elapsed / 1000.0 << " ms";
-	  timer.Start();
+      elapsed = timer.MicroSeconds();
+      LOG(ERROR) << "create forward: " << elapsed / 1000.0 << " ms";
+      timer.Start();
   }
 
   CHECK_EQ(status, 0)
@@ -252,9 +253,9 @@ void MKLConvolutionLayer<Dtype>::Init(
                                   bias_sizes, bias_strides);
 
   if (need_log) {
-	  elapsed = timer.MicroSeconds();
-	  LOG(ERROR) << "create forward layout: " << elapsed / 1000.0 << " ms";
-	  timer.Start();
+      elapsed = timer.MicroSeconds();
+      LOG(ERROR) << "create forward layout: " << elapsed / 1000.0 << " ms";
+      timer.Start();
   }
 /*
  * Backward by data layer setup
@@ -276,9 +277,9 @@ void MKLConvolutionLayer<Dtype>::Init(
           << "Failed dnnConvolutionCreateBackwardData with status "
           << status << "\n";
   if (need_log) {
-	  elapsed = timer.MicroSeconds();
-	  LOG(ERROR) << "create backward: " << elapsed / 1000.0 << " ms";
-	  timer.Start();
+      elapsed = timer.MicroSeconds();
+      LOG(ERROR) << "create backward: " << elapsed / 1000.0 << " ms";
+      timer.Start();
   }
 
   bwdd_bottom_diff->create_layouts(convolutionBwdData, dnnResourceDiffSrc,
@@ -289,9 +290,9 @@ void MKLConvolutionLayer<Dtype>::Init(
                                    f_dimension, fdata_sizes, fdata_strides);
 
   if (need_log) {
-	  elapsed = timer.MicroSeconds();
-	  LOG(ERROR) << "create backward layout: " << elapsed / 1000. << " ms";
-	  timer.Start();
+      elapsed = timer.MicroSeconds();
+      LOG(ERROR) << "create backward layout: " << elapsed / 1000. << " ms";
+      timer.Start();
   }
 
 /*
@@ -314,9 +315,9 @@ void MKLConvolutionLayer<Dtype>::Init(
           << "Failed dnnConvolutionCreateBackwardFilter with status "
           << status << "\n";
   if (need_log) {
-	  elapsed = timer.MicroSeconds();
-	  LOG(ERROR) << "create backward filter: " << elapsed / 1000. << " ms";
-	  timer.Start();
+      elapsed = timer.MicroSeconds();
+      LOG(ERROR) << "create backward filter: " << elapsed / 1000. << " ms";
+      timer.Start();
   }
 
   bwdf_bottom_data->create_layouts(convolutionBwdFilter, dnnResourceSrc,
@@ -330,9 +331,9 @@ void MKLConvolutionLayer<Dtype>::Init(
                                    f_dimension, fdata_sizes, fdata_strides);
 
   if (need_log) {
-	  elapsed = timer.MicroSeconds();
-	  LOG(ERROR) << "create filter layout: " << elapsed / 1000. << " ms";
-	  timer.Start();
+      elapsed = timer.MicroSeconds();
+      LOG(ERROR) << "create filter layout: " << elapsed / 1000. << " ms";
+      timer.Start();
   }
 
   // Note: this caused some trouble for older MKL
@@ -352,9 +353,9 @@ void MKLConvolutionLayer<Dtype>::Init(
   }
 
   if (need_log) {
-	  elapsed = timer.MicroSeconds();
-	  LOG(ERROR) << "create diff: " << elapsed / 1000. << " ms";
-	  timer.Start();
+      elapsed = timer.MicroSeconds();
+      LOG(ERROR) << "create diff: " << elapsed / 1000. << " ms";
+      timer.Start();
   }
 
 /*
@@ -413,8 +414,8 @@ void MKLConvolutionLayer<Dtype>::Init(
 #endif /* USE_MLSL */
 
   if (need_log) {
-	  elapsed = timer.MicroSeconds();
-	  LOG(ERROR) << "create backward bias: " << elapsed / 1000. << " ms";
+      elapsed = timer.MicroSeconds();
+      LOG(ERROR) << "create backward bias: " << elapsed / 1000. << " ms";
   }
 }
 
@@ -567,15 +568,15 @@ void MKLConvolutionLayer<Dtype>::Forward_cpu(
 
   double elapsed;
   if (need_log) {
-    elapsed = timer.MicroSeconds();
-  	LOG(ERROR) << "timer 1: " << elapsed << " us";
- 	timer.Start();
+      elapsed = timer.MicroSeconds();
+      LOG(ERROR) << "timer 1: " << elapsed << " us";
+      timer.Start();
   }
 
   if (fwd_top_data->conversion_needed()) {
-	if (need_log) {
-		LOG(ERROR) << "convert layout";
-	}
+    if (need_log) {
+        LOG(ERROR) << "convert layout";
+    }
     top[0]->set_prv_data_descriptor(fwd_top_data);
     res_convolutionFwd[dnnResourceDst] =
             reinterpret_cast<void *>(top[0]->mutable_prv_data());
@@ -586,7 +587,7 @@ void MKLConvolutionLayer<Dtype>::Forward_cpu(
   if (need_log) {
     elapsed = timer.MicroSeconds();
     LOG(ERROR) << "timer 2: " << elapsed << " us";
-  	timer.Start();
+    timer.Start();
   }
 
 
@@ -660,10 +661,10 @@ void MKLConvolutionLayer<Dtype>::Backward_cpu(
   if (propagate_down[0]) {
     void *res_convolutionBwdData[dnnResourceNumber];
 
-	Timer a;
-	if (need_log) {
-		a.Start();
-	}
+    Timer a;
+    if (need_log) {
+        a.Start();
+    }
     res_convolutionBwdData[dnnResourceDiffDst] =
       bwdd_top_diff->get_converted_prv(top[0], true);
     // Currently this conversion adds padding to weights.
@@ -671,11 +672,11 @@ void MKLConvolutionLayer<Dtype>::Backward_cpu(
     res_convolutionBwdData[dnnResourceFilter]  =
       bwdd_filter_data->get_converted_prv(this->blobs_[0].get(), false);
 
-	if (need_log) {
-		LOG(ERROR) << "get prv data: " << a.MicroSeconds() / 1000. << " ms";
-		LOG(ERROR) << "diff convert: " << bwdd_bottom_diff->conversion_needed();
-		a.Start();
-	}
+    if (need_log) {
+        LOG(ERROR) << "get prv data: " << a.MicroSeconds() / 1000. << " ms";
+        LOG(ERROR) << "diff convert: " << bwdd_bottom_diff->conversion_needed();
+        a.Start();
+    }
 
     if (bwdd_bottom_diff->conversion_needed()) {
       bottom[0]->set_prv_diff_descriptor(bwdd_bottom_diff);
@@ -685,32 +686,33 @@ void MKLConvolutionLayer<Dtype>::Backward_cpu(
       res_convolutionBwdData[dnnResourceDiffSrc] =
               bottom[0]->mutable_cpu_diff();
     }
-	if (need_log) {
-		LOG(ERROR) << "bottom diff data: " << a.MicroSeconds() / 1000. << " ms";
-		a.Start();
-	}
+
+    if (need_log) {
+        LOG(ERROR) << "bottom diff data: " << a.MicroSeconds() / 1000. << " ms";
+        a.Start();
+    }
 
     status = dnnExecute<Dtype>(convolutionBwdData, res_convolutionBwdData);
     CHECK_EQ(status, 0) << "Backward Data conv failed with status " << status;
 
-	if (need_log) {
-		LOG(ERROR) << "execute: " << a.MicroSeconds() / 1000. << " ms";
-	}
+    if (need_log) {
+        LOG(ERROR) << "execute: " << a.MicroSeconds() / 1000. << " ms";
+    }
   }
   STOP_TIMER("data back propagation");
 
   if (need_log) {
-  	LOG(ERROR) << "weight back propagation: " << this->param_propagate_down(0);
+      LOG(ERROR) << "weight back propagation: " << this->param_propagate_down(0);
   }
   START_TIMER();
   if (this->param_propagate_down(0)) {
     void *res_convolutionBwdFilter[dnnResourceNumber];
 
-	Timer b;
+    Timer b;
 
-	if (need_log) {
-		b.Start();
-	}
+    if (need_log) {
+      b.Start();
+    }
     res_convolutionBwdFilter[dnnResourceDiffDst] =
             bwdf_top_diff->get_converted_prv(top[0], true);
     // The last get_converted_prv() argument is a hack for reusing conversion
@@ -744,12 +746,12 @@ void MKLConvolutionLayer<Dtype>::Backward_cpu(
     status = dnnExecute<Dtype>(convolutionBwdFilter, res_convolutionBwdFilter);
     CHECK_EQ(status, 0) << "Backward Filter conv failed with status " << status;
 
-	if (need_log) {
-		LOG(ERROR) << "bwd: " << b.MicroSeconds() / 1000. << " ms";
-		b.Start();
-	}
+    if (need_log) {
+      LOG(ERROR) << "bwd: " << b.MicroSeconds() / 1000. << " ms";
+      b.Start();
+    }
 
-	// LOG(ERROR) << "iter size: " << Caffe::iter_size();
+    // LOG(ERROR) << "iter size: " << Caffe::iter_size();
     if (bwdf2fwd_filter_diff->conversion_needed()) {
       // Different layouts in fwd filters vs bwd diffs
       void *convert_resources[dnnResourceNumber];
@@ -784,10 +786,10 @@ void MKLConvolutionLayer<Dtype>::Backward_cpu(
       CHECK_EQ(status, 0) << "Conversion failed with status " << status;
     }
 
-	if (need_log) {
-		LOG(ERROR) << "convert weight diff to user: " << b.MicroSeconds() / 1000. << " ms";
-		b.Start();
-	}
+    if (need_log) {
+        LOG(ERROR) << "convert weight diff to user: " << b.MicroSeconds() / 1000. << " ms";
+        b.Start();
+    }
 
     if (Caffe::iter_size() > 1) {
       // if (iter_size > 1) then diffs are accumulated across iterations
@@ -801,16 +803,16 @@ void MKLConvolutionLayer<Dtype>::Backward_cpu(
               this->blobs_[0]->mutable_cpu_diff());
       }
     }
-	if (need_log) {
-		LOG(ERROR) << "need filter diff conversion:  " << bwdf_filter_diff->conversion_needed();
-		LOG(ERROR) << "filter smooth takes: " << b.MicroSeconds() / 1000. << " ms";
-	}
+    if (need_log) {
+        LOG(ERROR) << "need filter diff conversion:  " << bwdf_filter_diff->conversion_needed();
+        LOG(ERROR) << "filter smooth takes: " << b.MicroSeconds() / 1000. << " ms";
+    }
   }
   STOP_TIMER("weight back propagation");
 
 
   if (need_log) {
-  	LOG(ERROR) << "bias back propagation: " << this->param_propagate_down(1);
+      LOG(ERROR) << "bias back propagation: " << this->param_propagate_down(1);
   }
   START_TIMER();
   if (this->param_propagate_down(1)) {

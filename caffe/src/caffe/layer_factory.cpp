@@ -95,6 +95,7 @@ shared_ptr<Layer<Dtype> > GetConvolutionLayer(
     }
   }
 #endif
+  // LOG(ERROR) << "dilation: " << use_dilation;
 
   if (engine == ConvolutionParameter_Engine_DEFAULT && param.engine() != "") {
     EngineParser ep(param.engine());
