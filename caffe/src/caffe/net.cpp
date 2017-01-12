@@ -170,7 +170,7 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
               // !layer_param.name().compare("rfcn_cls") ||
               // !layer_param.name().compare("res4a_branch1") ||
               // !layer_param.name().compare("res4a_branch2a") ||
-	      // !layer_param.name().compare("res3a_branch1") ||
+              // !layer_param.name().compare("res3a_branch1") ||
               // !layer_param.name().compare("res3a_branch2a")
               // !layer_param.type().compare("BatchNorm") ||
               // !layer_param.type().compare("Convolution")
@@ -893,7 +893,7 @@ void Net<Dtype>::AppendParam(const NetParameter& param, const int layer_id,
     }
     const int learnable_param_id = learnable_params_.size();
 	if (!params_[net_param_id].get()) {
-		LOG(ERROR) << "layer: " << layer_names_[layer_id] << " param: " << param_name << " is NULL";
+		LOG(FATAL) << "layer: " << layer_names_[layer_id] << " param: " << param_name << " is NULL";
 	}
     learnable_params_.push_back(params_[net_param_id].get());
     learnable_param_ids_.push_back(learnable_param_id);

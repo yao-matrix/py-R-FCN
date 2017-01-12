@@ -453,7 +453,7 @@ void MKLConvolutionLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
   */
   if (reinitialize == true) {
     if (reinit_times >= 1) {
-      LOG(FATAL) << "Pls use same size image input for performace seek";
+      LOG(FATAL) << "Pls use same size image input for performance seek";
     }
     if (need_log) {
       LOG(ERROR) << "re-initialize";

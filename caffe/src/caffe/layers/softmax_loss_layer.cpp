@@ -154,22 +154,19 @@ void SoftmaxWithLossLayer<Dtype>::Forward_cpu(
   const Dtype* prob_data = prob_.cpu_data();
   const Dtype* label = bottom[1]->cpu_data();
   int dim = prob_.count() / outer_num_;
-  int count = outer_num_ * inner_num_;
+  int count = 0;
   Dtype loss = 0;
-#ifdef _OPENMP
-  #pragma omp parallel for collapse(2) reduction(-:loss,count)
-#endif
   for (int i = 0; i < outer_num_; ++i) {
     for (int j = 0; j < inner_num_; j++) {
       const int label_value = static_cast<int>(label[i * inner_num_ + j]);
       if (has_ignore_label_ && label_value == ignore_label_) {
-        count = count - 1;
         continue;
       }
       DCHECK_GE(label_value, 0);
       DCHECK_LT(label_value, prob_.shape(softmax_axis_));
-      loss = loss - log(std::max(prob_data[i * dim + label_value * inner_num_ + j],
+      loss -= log(std::max(prob_data[i * dim + label_value * inner_num_ + j],
                            Dtype(FLT_MIN)));
+      ++count;
     }
   }
   top[0]->mutable_cpu_data()[0] = loss / get_normalizer(normalization_, count);

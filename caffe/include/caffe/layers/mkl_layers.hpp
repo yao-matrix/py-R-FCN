@@ -408,7 +408,7 @@ class MKLBatchNormLayer : public Layer<Dtype> {
         bwd_bottom_diff(new MKLDiff<Dtype>()),
         batchNormFwd(static_cast<dnnPrimitive_t>(NULL)),
         batchNormBwd(static_cast<dnnPrimitive_t>(NULL)),
-	batchNormBwdScaleShift(static_cast<dnnPrimitive_t>(NULL)),
+        batchNormBwdScaleShift(static_cast<dnnPrimitive_t>(NULL)),
         scaleShift_buffer_(static_cast<Dtype*>(NULL)),
         scaleShift_diff_(static_cast<Dtype*>(NULL)),
         workspace_buffer_(static_cast<Dtype*>(NULL)),
