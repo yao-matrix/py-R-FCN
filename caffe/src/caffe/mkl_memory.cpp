@@ -276,10 +276,12 @@ Dtype* MKLMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
   Blob<Dtype>* blob, bool set_prv_ptr,
   MKLMemoryDescriptor<Dtype, is_diff>* converted_in_fwd) {
   if (this->convert_to_int) {
+    // LOG(ERROR) << "11111";
     int status;
     void *convert_resources[dnnResourceNumber];
     const Dtype* prv_ptr = is_diff ?  blob->prv_diff() : blob->prv_data();
     if (prv_ptr == NULL) {
+      // LOG(ERROR) << "22222";
       if (converted_in_fwd) {
         // hack for reusing previously done conversion
         // if(dnnLayoutCompare(converted_in_fwd->layout_int , this->layout_int))
@@ -312,6 +314,7 @@ Dtype* MKLMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
 
       if (set_prv_ptr) {
         if (is_diff) {
+          // LOG(ERROR) << "333333";
           blob->set_prv_diff_descriptor(this->get_shared_ptr(), true);
 		}
         else {
@@ -320,6 +323,7 @@ Dtype* MKLMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
       }
       return this->internal_ptr;
     } else {
+      // LOG(ERROR) << "44444";
       // This section helps if padding needs to be added (or removed...)
       // TODO: consider removing when no longer needed.
       shared_ptr<PrvMemDescr> prv_mem_descriptor =
@@ -336,6 +340,7 @@ Dtype* MKLMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
       if (!dnnLayoutCompare<Dtype>(current_descr->layout_int,
               this->layout_int)) {
         if (converted_in_fwd) {
+          // LOG(ERROR) << "555555";
           // hack for reusing previously done conversion
           // if(dnnLayoutCompare(converted_in_fwd->layout_int,this->layout_int))
           if (1) {
@@ -364,6 +369,7 @@ Dtype* MKLMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
         }
 
         if (status != 0) {
+          // LOG(ERROR) << "66666";
           // TODO: Very weird that we end up here for conv1. No idea why....
           DLOG(INFO) << "!!!! Failed creation convert_prv2prv with status "
                   << status << "\n";
@@ -382,6 +388,7 @@ Dtype* MKLMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
           CHECK_EQ(status, 0) << "Conversion failed with status " << status;
 
         } else {
+          // LOG(ERROR) << "77777";
           this->allocate();
 
           convert_resources[dnnResourceFrom] = is_diff ?

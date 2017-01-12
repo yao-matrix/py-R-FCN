@@ -153,9 +153,9 @@ void SGDSolver<Dtype>::ApplyUpdate() {
   ClipGradients();
   int learnable_param_size = this->net_->learnable_params().size();
 
-#ifdef _OPENMP
-#pragma omp for
-#endif
+// #ifdef _OPENMP
+// #pragma omp for
+// #endif
   for (int param_id = 0; param_id < learnable_param_size; ++param_id) {
 	// LOG(ERROR) << "update param: " << param_id;
     ApplyUpdate(param_id);
@@ -297,7 +297,7 @@ void SGDSolver<Dtype>::ComputeUpdateValue(int param_id, Dtype rate) {
 
   // LOG(ERROR) << "learning rate: " << net_params_lr[param_id];
   if (net_params_lr[param_id] == 0.f) {
-	  // LOG(ERROR) << "dismiss update while learning rate is 0";
+	  // LOG(ERROR) << "skip update while learning rate is 0";
 	  return;
   }
 

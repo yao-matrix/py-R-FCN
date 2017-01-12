@@ -63,6 +63,8 @@ void MKLBatchNormLayer<Dtype>::Init(const vector<Blob<Dtype>*>& bottom,
   bias_term_ = this->layer_param_.batch_norm_param().bias_term();
   use_global_stats_ = this->layer_param_.batch_norm_param().use_global_stats();
 
+
+  // LOG(ERROR) << "BN layer: " << this->layer_param_.name() << " use_weight_bias: " << use_weight_bias_ << ", use_global_stats: " << use_global_stats_ << ", bias_term_: " << bias_term_;
   size_t dim = 4, sizes[4], strides[4];
 
   channels_ = bottom[0]->channels();
@@ -112,6 +114,7 @@ void MKLBatchNormLayer<Dtype>::Init(const vector<Blob<Dtype>*>& bottom,
   //                2 is mean, 3 is variance, 4 is moving average fraction
   // Matrix: don't flush cache if initialized
   if (blobs_initialized_ && this->blobs_.size() != 0 && channels_ == this->blobs_[0]->shape(0)) {
+      LOG(ERROR) << "use blobs_ cache rather than re-initialize";
       return;
   }
 
@@ -292,10 +295,15 @@ void MKLBatchNormLayer<Dtype>::Forward_cpu(
         // use the stored mean/variance estimates.
         const Dtype scale_factor = this->blobs_[4]->cpu_data()[0] == 0 ?
           0 : 1 / this->blobs_[4]->cpu_data()[0];
+        LOG(ERROR) << "scale_factor: " << scale_factor << "mean count: " << mean_.count();
         caffe_cpu_scale(mean_.count(), scale_factor,
           this->blobs_[2]->cpu_data(), mean_.mutable_cpu_data());
         caffe_cpu_scale(variance_.count(), scale_factor,
           this->blobs_[3]->cpu_data(), variance_.mutable_cpu_data());
+        // LOG(ERROR) << "mean: ";
+        // for (int i = 0; i < mean_.count(); i++) {
+        //    LOG(ERROR) << mean_.cpu_data()[i] << ", ";
+        // }
       }
   }
 
@@ -370,6 +378,7 @@ void MKLBatchNormLayer<Dtype>::Backward_cpu(
   BatchNorm_res[dnnResourceDiffDst] = bwd_top_diff->get_converted_prv(top[0], true);
   // LOG(ERROR) << this->layer_param_.name() << " diff dst is " << BatchNorm_res[dnnResourceDiffDst];
   if (bwd_bottom_diff->conversion_needed()) {
+    // LOG(ERROR) << this->layer_param_.name() << " use prv diff";
     bottom[0]->set_prv_diff_descriptor(bwd_bottom_diff);
     BatchNorm_res[dnnResourceDiffSrc] = bottom[0]->mutable_prv_diff();
   } else {
@@ -382,6 +391,7 @@ void MKLBatchNormLayer<Dtype>::Backward_cpu(
 
   if (this->param_propagate_down_[0] || this->param_propagate_down_[1]) {
     // Store ScaleShift blobs
+    LOG(ERROR) << "BN layer: " << this->layer_param_.name() << " need weight propagation";
     Dtype* diff_scale = this->blobs_[0]->mutable_cpu_diff();
     Dtype* diff_shift = this->blobs_[1]->mutable_cpu_diff();
     for (int i = 0; i < channels_; i++) {

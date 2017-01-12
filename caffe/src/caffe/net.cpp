@@ -662,7 +662,7 @@ void Net<Dtype>::CompilationRuleThree(const NetParameter& param,
       batch_norm_top.append("_x");
     }
 
-#if 0
+#if 1
     // If current layer is ReLU of MKL2017 engine..
     if (((layer_param->type().compare("ReLU") == 0) &&
         ((layer_param->relu_param().engine() ==
