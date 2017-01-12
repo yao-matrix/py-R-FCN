@@ -761,7 +761,11 @@ inline Dtype Layer<Dtype>::Forward(const vector<Blob<Dtype>*>& bottom,
       const Dtype* loss_weights = top[top_id]->cpu_diff();
       loss += caffe_cpu_dot(count, data, loss_weights);
     }
-    LOG(ERROR) << this->layer_param_.name() << " loss: " << loss;
+#if 0
+    if (loss != 0) {
+      LOG(ERROR) << this->layer_param_.name() << " loss: " << loss;
+    }
+#endif
     break;
   case Caffe::GPU:
     Forward_gpu(bottom, top);

@@ -202,6 +202,7 @@ def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_clas
     # Select sampled values from various arrays:
     labels = labels[keep_inds]
     # Clamp labels for the background RoIs to 0
+    # print fg_rois_per_this_image
     labels[fg_rois_per_this_image:] = 0
     rois = all_rois[keep_inds]
     

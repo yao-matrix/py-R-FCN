@@ -123,6 +123,7 @@ class ProposalLayer(caffe.Layer):
 
         # Convert anchors into proposals via bbox transformations
         proposals = bbox_transform_inv(anchors, bbox_deltas)
+        # print proposals
 
         # 2. clip predicted boxes to image
         proposals = clip_boxes(proposals, im_info[:2])
@@ -176,5 +177,6 @@ def _filter_boxes(boxes, min_size):
     """Remove all boxes with any side smaller than min_size."""
     ws = boxes[:, 2] - boxes[:, 0] + 1
     hs = boxes[:, 3] - boxes[:, 1] + 1
+    # print boxes
     keep = np.where((ws >= min_size) & (hs >= min_size))[0]
     return keep

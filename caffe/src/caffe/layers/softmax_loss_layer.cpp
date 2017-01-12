@@ -143,6 +143,7 @@ Dtype SoftmaxWithLossLayer<Dtype>::get_normalizer(
   }
   // Some users will have no labels for some examples in order to 'turn off' a
   // particular loss in a multi-task setup. The max prevents NaNs in that case.
+  // LOG(ERROR) << this->layer_param_.name() << " normalizer is: " << normalizer;
   return std::max(Dtype(1.0), normalizer);
 }
 
