@@ -215,9 +215,9 @@ void MKLBatchNormLayer<Dtype>::Forward_cpu(
     reinterpret_cast<void *>(const_cast<Dtype*>(bottom[0]->prv_data()));
   int is_first_pass = 0;
 
-  if (0) /* (NULL != bottom_data) */ {
+  if (NULL != bottom_data) {
     // Is it the first pass? Create a primitive.
-    LOG(ERROR) << "Using private data in " << this->layer_param_.name();
+    // LOG(ERROR) << "Using private data in " << this->layer_param_.name();
     if (batchNormFwd == NULL) {
       is_first_pass = 1;
 
@@ -228,8 +228,10 @@ void MKLBatchNormLayer<Dtype>::Forward_cpu(
            bottom[0]->get_prv_data_descriptor());
       CHECK(mem_descr != NULL);
 
+      /*
       LOG(ERROR) << "Using layout of " << mem_descr->name
               << " as input layout for " << this->layer_param_.name();
+      */
 
       fwd_bottom_data = mem_descr;
 
@@ -378,7 +380,7 @@ void MKLBatchNormLayer<Dtype>::Backward_cpu(
   e = dnnExecute<Dtype>(batchNormBwd, BatchNorm_res);
   CHECK_EQ(e, E_SUCCESS);
 
-  if (use_weight_bias_) {
+  if (this->param_propagate_down_[0] || this->param_propagate_down_[1]) {
     // Store ScaleShift blobs
     Dtype* diff_scale = this->blobs_[0]->mutable_cpu_diff();
     Dtype* diff_shift = this->blobs_[1]->mutable_cpu_diff();
