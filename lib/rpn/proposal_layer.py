@@ -72,6 +72,9 @@ class ProposalLayer(caffe.Layer):
         scores = bottom[0].data[:, self._num_anchors:, :, :]
         bbox_deltas = bottom[1].data
         im_info = bottom[2].data[0, :]
+        print "bottom 0", scores
+        print "bottom 1", bbox_deltas
+        print "bottom 2", im_info
 
         if DEBUG:
             print 'im_size: ({}, {})'.format(im_info[0], im_info[1])

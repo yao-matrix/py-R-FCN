@@ -114,7 +114,7 @@ void MKLBatchNormLayer<Dtype>::Init(const vector<Blob<Dtype>*>& bottom,
   //                2 is mean, 3 is variance, 4 is moving average fraction
   // Matrix: don't flush cache if initialized
   if (blobs_initialized_ && this->blobs_.size() != 0 && channels_ == this->blobs_[0]->shape(0)) {
-      LOG(ERROR) << "use blobs_ cache rather than re-initialize";
+      // LOG(ERROR) << "use blobs_ cache rather than re-initialize";
       return;
   }
 

@@ -166,17 +166,19 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
     if (param.engine() != "") {
 	  // XXX: Matrix: force some convolution layers to CAFFE engine here to WR performance issue
 	  if (0
-              // !layer_param.name().compare("conv1") ||
-              // !layer_param.name().compare("rfcn_cls") ||
-              // !layer_param.name().compare("res4a_branch1") ||
-              // !layer_param.name().compare("res4a_branch2a") ||
-              // !layer_param.name().compare("res3a_branch1") ||
-              // !layer_param.name().compare("res3a_branch2a") ||
-              // !layer_param.name().compare("rpn_bbox_pred")
-              // !layer_param.type().compare("BatchNorm")
-              // !layer_param.type().compare("Convolution")
-              // !layer_param.type().compare("Pooling")
-             ) {
+          // !layer_param.name().compare("conv1") ||
+          // !layer_param.name().compare("rpn_cls_score") ||
+          // !layer_param.name().compare("rpn_bbox_pred") ||
+          // !layer_param.name().compare("rfcn_cls")
+          // !layer_param.name().compare("res4a_branch1") ||
+          // !layer_param.name().compare("res4a_branch2a") ||
+          // !layer_param.name().compare("res3a_branch1") ||
+          // !layer_param.name().compare("res3a_branch2a") ||
+          // !layer_param.name().compare("rpn_bbox_pred")
+          // !layer_param.type().compare("BatchNorm")
+          // !layer_param.type().compare("Convolution")
+          // !layer_param.type().compare("Pooling")
+         ) {
 	     // LOG(ERROR) << layer_param.name() << " use CAFFE Engine";
 	     param.mutable_layer(layer_id)->set_engine("CAFFE");
 	  } else {
@@ -994,9 +996,9 @@ Dtype Net<Dtype>::ForwardFromTo(int start, int end) {
 	    // LOG(ERROR) << "Forwarding " << layer_names_[i] << " start";
 	}
 
-    LOG(ERROR) << layer_names_[i] << " forward start";
+    // LOG(ERROR) << layer_names_[i] << " forward start";
     Dtype layer_loss = layers_[i]->Forward(bottom_vecs_[i], top_vecs_[i]);
-    LOG(ERROR) << layer_names_[i] << " forward done";
+    // LOG(ERROR) << layer_names_[i] << " forward done";
     loss += layer_loss;
 
 	if (time_info_ && iter_cnt >= 1) {

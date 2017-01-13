@@ -277,7 +277,7 @@ Dtype* MKLMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
   Blob<Dtype>* blob, bool set_prv_ptr,
   MKLMemoryDescriptor<Dtype, is_diff>* converted_in_fwd) {
   if (this->convert_to_int) {
-    LOG(ERROR) << "11111";
+    // LOG(ERROR) << "11111";
     int status;
     void *convert_resources[dnnResourceNumber];
     const Dtype* prv_ptr = is_diff ?  blob->prv_diff() : blob->prv_data();
@@ -421,7 +421,7 @@ Dtype* MKLMemoryDescriptor<Dtype, is_diff>::get_converted_prv(
     return const_cast<Dtype *>(prv_ptr);
   }
 
-  LOG(ERROR) << "88888";
+  // LOG(ERROR) << "88888";
   return (is_diff ? const_cast<Dtype *>(blob->cpu_diff()) :
                     const_cast<Dtype *>(blob->cpu_data()));
 }

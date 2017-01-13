@@ -89,7 +89,7 @@ MKLConvolutionLayer<Dtype>::MKLConvolutionLayer(
         bwdb_bias_diff_iter(new MKLDiff<Dtype>()) {
           layer_name = param.name();
           reinit_times = 0;
-          LOG(ERROR) << layer_name << " MKL";
+          // LOG(ERROR) << layer_name << " MKL";
         }
 
 template <typename Dtype>

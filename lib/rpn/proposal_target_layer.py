@@ -51,16 +51,18 @@ class ProposalTargetLayer(caffe.Layer):
             (all_rois, np.hstack((zeros, gt_boxes[:, :-1])))
         )
 
+        print all_rois
+
         # Sanity check: single batch only
         assert np.all(all_rois[:, 0] == 0), \
                 'Only single item batches are supported'
 
         rois_per_image = np.inf if cfg.TRAIN.BATCH_SIZE == -1 else cfg.TRAIN.BATCH_SIZE
-        fg_rois_per_image = np.round(cfg.TRAIN.FG_FRACTION * rois_per_image)
+        fg_rois_per_image = int(np.round(cfg.TRAIN.FG_FRACTION * rois_per_image))
 
         # Sample rois with classification labels and bounding box regression
         # targets
-        # print 'proposal_target_layer:', fg_rois_per_image
+        # print 'proposal_target_layer: roi num[%d], gf roi num[%f]'% (rois_per_image, fg_rois_per_image)
         labels, rois, bbox_targets, bbox_inside_weights = _sample_rois(
             all_rois, gt_boxes, fg_rois_per_image,
             rois_per_image, self._num_classes)
@@ -177,6 +179,7 @@ def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_clas
 
     # Select foreground RoIs as those with >= FG_THRESH overlap
     fg_inds = np.where(max_overlaps >= cfg.TRAIN.FG_THRESH)[0]
+    # print fg_inds
     # Guard against the case when an image has fewer than fg_rois_per_image
     # foreground RoIs
     fg_rois_per_this_image = min(fg_rois_per_image, fg_inds.size)
@@ -191,6 +194,7 @@ def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_clas
     # against there being fewer than desired)
     bg_rois_per_this_image = rois_per_image - fg_rois_per_this_image
     bg_rois_per_this_image = min(bg_rois_per_this_image, bg_inds.size)
+    print rois_per_image, fg_rois_per_this_image, bg_rois_per_this_image 
     # Sample background regions without replacement
     if bg_inds.size > 0:
         bg_inds = npr.choice(bg_inds, size=bg_rois_per_this_image, replace=False)
