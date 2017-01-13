@@ -41,6 +41,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "caffe/layer.hpp"
 #include "caffe/layers/mkl_layers.hpp"
 #include "caffe/util/math_functions.hpp"
+#include "caffe/util/performance.hpp"
+
+#ifdef USE_MLSL
+using namespace MLSL;
+#endif
 
 namespace caffe {
 
@@ -95,6 +100,22 @@ void MKLLRNLayer<Dtype>::Init(const vector<Blob<Dtype>*>& bottom,
   dnnDelete<Dtype>(lrnBwd);
   dnnReleaseBuffer<Dtype>(lrn_buffer_);
   lrn_buffer_ = NULL;
+
+#ifdef USE_MLSL
+
+  DataType dt = (sizeof(Dtype) == 4)? DT_FLOAT : DT_DOUBLE;
+  ComputeOpRegInfo *myRegInfo;
+  myRegInfo = new ComputeOpRegInfo(COMP_OP_TYPE_POOL);
+  myRegInfo->SetName(this->layer_param_.name().c_str());
+  myRegInfo->AddInputFeatureMap(channels_, width_*height_, dt);
+  myRegInfo->AddOutputFeatureMap(channels_, width_*height_, dt);
+
+  myRegInfo->Validate();
+  this->layerOp = new ComputeOp(myRegInfo, caffe::internode::data_parallelism);
+  delete myRegInfo;
+
+#endif /* USE_MLSL */
+
 }
 
 template <typename Dtype>
@@ -136,6 +157,50 @@ void MKLLRNLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
     Init(bottom, top);
   }
 }
+
+#ifdef USE_MLSL
+
+template <typename Dtype>
+void MKLLRNLayer<Dtype>::pack_buffer(FeatureMap *fm, Dtype *to, const Dtype *from) {
+      for (int i = 0; i < fm->NumPackBlocks(); i++) {
+          BlockInfo * bi = fm->GetPackBlock(i);
+          int bMBLen = bi->MBLen();
+          int bMBStart = bi->MBStart();
+          int bFMLen = bi->FMLen();
+          int bFMStart = bi->FMStart();
+          Dtype *src = (Dtype*) from;
+          Dtype *dst = (Dtype*) (to + bi->BufOffset());
+          for (int mb = 0; mb < bMBLen; mb++) {
+              for (int fm = 0; fm < bFMLen; fm++) {
+                  for (int s = 0 ; s < bi->FMSize(); s++) {
+                    dst[(fm*bMBLen + mb)*bi->FMSize() + s] = src[s*bFMLen*bMBLen + (bFMStart+fm)*bMBLen + (bMBStart+mb)];
+                  }
+              }
+          }
+      }
+  }
+
+template <typename Dtype>
+void MKLLRNLayer<Dtype>::unpack_buffer(FeatureMap *fm, const Dtype *from, Dtype *to) {
+      for (int i = 0; i < fm->NumUnpackBlocks(); i++) {
+          BlockInfo * bi = fm->GetUnpackBlock(i);
+          int bMBLen = bi->MBLen();
+          int bMBStart = bi->MBStart();
+          int bFMLen = bi->FMLen();
+          int bFMStart = bi->FMStart();
+          Dtype *dst = (Dtype*) to;
+          Dtype *src = (Dtype*) (from + bi->BufOffset());
+          for (int mb = 0; mb < bMBLen; mb++) {
+              for (int fm = 0; fm < bFMLen; fm++) {
+                  for (int s = 0 ; s < bi->FMSize(); s++) {
+                    dst[s*bFMLen*bMBLen + (bFMStart+fm)*bMBLen + (bMBStart+mb)] = src[(fm*bMBLen + mb)*bi->FMSize() + s];
+                  }
+              }
+          }
+      }
+}
+
+#endif
 
 template <typename Dtype>
 void MKLLRNLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
@@ -236,7 +301,10 @@ void MKLLRNLayer<Dtype>::CrossChannelForward_cpu(
   }
   lrn_res[dnnResourceWorkspace] = lrn_buffer_;
 
+  PERFORMANCE_MEASUREMENT_BEGIN();
   e = dnnExecute<Dtype>(lrnFwd, lrn_res);
+  PERFORMANCE_MEASUREMENT_END_STATIC("FW_mkl_lrn");
+
   CHECK_EQ(e, E_SUCCESS);
 }
 
@@ -274,7 +342,11 @@ void MKLLRNLayer<Dtype>::CrossChannelBackward_cpu(
   } else {
     lrn_res[dnnResourceDiffSrc] = bottom[0]->mutable_cpu_diff();
   }
+
+  PERFORMANCE_MEASUREMENT_BEGIN();
   e = dnnExecute<Dtype>(lrnBwd, lrn_res);
+  PERFORMANCE_MEASUREMENT_END_STATIC("BW_mkl_lrn");
+
   CHECK_EQ(e, E_SUCCESS);
 }
 

@@ -211,6 +211,9 @@ void ConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
    // LOG(ERROR) << "data back propagation takes: " << timer2.MicroSeconds() / 1000. << " ms";
   }
 
+#ifdef USE_MLSL
+  this->on_delinp_ready(propagate_down);
+#endif /* USE_MLSL */
   // LOG(ERROR) << "backward total takes: " << timer.MicroSeconds() / 1000. << " ms";
 }
 

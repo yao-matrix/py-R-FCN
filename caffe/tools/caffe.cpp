@@ -55,6 +55,11 @@ namespace bp = boost::python;
 #include "caffe/multinode/multinode.hpp"
 #include "caffe/util/signal_handler.h"
 
+#ifdef USE_MLSL
+#include "caffe/multinode/MlslSync.hpp"
+#include "caffe/internode/mlsl_util.hpp"
+#endif /* USE_MLSL */
+
 using caffe::Blob;
 using caffe::Caffe;
 using caffe::Net;
@@ -302,13 +307,30 @@ int train() {
   if (FLAGS_param_server != "") {
     LOG(INFO) << "Configuring multinode setup";
 
+#ifdef USE_MLSL
+      if (FLAGS_param_server != "mlsl") {
+#else
       if (FLAGS_param_server != "mpi") {
+#endif /* USE_MLSL */
+
         LOG(ERROR) << "currently unsupported";
         return 1;
       }
-      caffe::SynchronousNode<float> sync(solver, FLAGS_comm_threads);
-      LOG(INFO) << "Starting Multi-node Optimization in mpi environment";
-      sync.run();
+
+#ifdef USE_MLSL
+      if (FLAGS_param_server == "mlsl") {
+        caffe::MlslSync<float> sync(solver);
+        LOG(INFO) << "Starting Multi-node Optimization in MLSL environment";
+        sync.run();
+      }
+#else /* !USE_MLSL */
+      if (FLAGS_param_server == "mpi") {
+        caffe::SynchronousNode<float> sync(solver, FLAGS_comm_threads);
+        LOG(INFO) << "Starting Multi-node Optimization in mpi environment";
+        sync.run();
+      }
+#endif /* USE_MLSL */
+
   } else if (gpus.size() > 1) {
     caffe::P2PSync<float> sync(solver, NULL, solver->param());
     sync.Run(gpus);
@@ -726,7 +748,13 @@ RegisterBrewFunction(compare);
 
 
 int main(int argc, char** argv) {
+
+#ifdef USE_MLSL
+  caffe::internode::mlsl_init(argc, argv);
+#else /* !USE_MLSL */
   caffe::internode::mpi_init(argc, argv);
+#endif /* USE_MLSL */
+
   // Print output to stderr (while still logging).
   FLAGS_alsologtostderr = 1;
   // Set version
@@ -749,18 +777,36 @@ int main(int argc, char** argv) {
     try {
 #endif
       int ret = GetBrewFunction(caffe::string(argv[1]))();
+
+#ifdef USE_MLSL
+      caffe::internode::mlsl_finalize();
+#else /* !USE_MLSL */
       caffe::internode::mpi_finalize();
+#endif /* USE_MLSL */
+
       return ret;
 #ifdef WITH_PYTHON_LAYER
     } catch (bp::error_already_set) {
       PyErr_Print();
+
+#ifdef USE_MLSL
+      caffe::internode::mlsl_finalize();
+#else /* USE_MLSL */
       caffe::internode::mpi_finalize();
+#endif /* USE_MLSL */
+
       return 1;
     }
 #endif
   } else {
     gflags::ShowUsageWithFlagsRestrict(argv[0], "tools/caffe");
   }
-  caffe::internode::mpi_finalize();
+
+#ifdef USE_MLSL
+      caffe::internode::mlsl_finalize();
+#else /* !USE_MLSL */
+      caffe::internode::mpi_finalize();
+#endif /* USE_MLSL */
+
   return 0;
 }

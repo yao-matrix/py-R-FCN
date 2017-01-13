@@ -59,6 +59,41 @@ else
 	OTHER_BUILD_DIR := $(DEBUG_BUILD_DIR)
 endif
 
+
+#################### MLSL ####################
+
+ifeq ($(USE_MLSL), 1)
+ifdef I_MPI_ROOT
+	MPI_H_EXIST := $(shell test -f $(I_MPI_ROOT)/intel64/include/mpi.h; echo $$?)
+ifeq ($(MPI_H_EXIST),0)
+	COMMON_FLAGS += -DUSE_MLSL=1 -I$(I_MPI_ROOT)/intel64/include
+else
+	COMMON_FLAGS += -DUSE_MLSL=1 $(shell pkg-config --cflags mpich)
+endif
+else
+	COMMON_FLAGS += -DUSE_MLSL=1 $(shell pkg-config --cflags mpich)
+endif
+	LIBRARIES += mlsl mpi
+	INCLUDE_DIRS += $(MLSL_ROOT)/intel64/include
+	LIBRARY_DIRS += $(MLSL_ROOT)/intel64/lib
+
+ifeq ($(DISTR_WEIGHT_UPDATE), 1)
+	COMMON_FLAGS += -DDISTR_WEIGHT_UPDATE
+endif
+
+ifeq ($(CAFFE_PER_LAYER_TIMINGS), 1)
+	COMMON_FLAGS += -DCAFFE_PER_LAYER_TIMINGS
+endif
+
+ifeq ($(CAFFE_MLSL_SHUFFLE), 1)
+        COMMON_FLAGS += -DCAFFE_MLSL_SHUFFLE
+endif
+
+endif
+
+#################### MLSL ####################
+
+
 # All of the directories containing code.
 SRC_DIRS := $(shell find * -type d -exec bash -c "find {} -maxdepth 1 \
 	\( -name '*.cpp' -o -name '*.proto' \) | grep -q ." \; -print)
@@ -234,7 +269,7 @@ ifeq ($(USE_OPENCV), 1)
 	ifeq ($(OPENCV_VERSION), 3)
 		LIBRARIES += opencv_imgcodecs
 	endif
-		
+
 endif
 PYTHON_LIBRARIES ?= boost_python python2.7
 WARNINGS := -Wall -Wno-sign-compare
@@ -384,6 +419,8 @@ ifneq (,$(findstring clang++,$(CXX)))
 	STATIC_LINK_COMMAND := -Wl,-force_load $(STATIC_NAME)
 else ifneq (,$(findstring g++,$(CXX)))
 	STATIC_LINK_COMMAND := -Wl,--whole-archive $(STATIC_NAME) -Wl,--no-whole-archive
+else ifneq (,$(findstring mpi,$(CXX)))
+	STATIC_LINK_COMMAND := -Wl,--whole-archive $(STATIC_NAME) -Wl,--no-whole-archive
 else ifneq (,$(findstring icpc,$(CXX)))
 	STATIC_LINK_COMMAND := -Wl,--whole-archive $(STATIC_NAME) -Wl,--no-whole-archive
 else
@@ -435,6 +472,11 @@ endif
 ifeq ($(WITH_PYTHON_LAYER), 1)
 	COMMON_FLAGS += -DWITH_PYTHON_LAYER
 	LIBRARIES += $(PYTHON_LIBRARIES)
+endif
+
+# Performance monitoring
+ifeq ($(PERFORMANCE_MONITORING), 1)
+	CXXFLAGS += -DPERFORMANCE_MONITORING
 endif
 
 # MKLDNN configuration

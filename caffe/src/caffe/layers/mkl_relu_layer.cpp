@@ -42,7 +42,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "caffe/layers/mkl_layers.hpp"
 #include "caffe/util/performance.hpp"
 
+#ifdef USE_MLSL
+using namespace MLSL;
+#endif
+
 namespace caffe {
+
 template <typename Dtype>
 MKLReLULayer<Dtype>::~MKLReLULayer() {
     dnnDelete<Dtype>(reluFwd_);
@@ -84,12 +89,81 @@ void MKLReLULayer<Dtype>::Init(
   // what layout is used by neighbours.
   dnnDelete<Dtype>(reluFwd_);
   dnnDelete<Dtype>(reluBwd_);
+
+#ifdef USE_MLSL
+
+  int ic = bottom[0]->channels();
+  int iw = bottom[0]->width();
+  int ih = bottom[0]->height();
+
+  int oc = ic; //top[0]->channels();
+  int ow = iw; //top[0]->width();
+  int oh = ih; //top[0]->height();
+
+  DataType dt = (sizeof(Dtype) == 4)? DT_FLOAT : DT_DOUBLE;
+  ComputeOpRegInfo *myRegInfo;
+  myRegInfo = new ComputeOpRegInfo(COMP_OP_TYPE_ACT);
+  myRegInfo->SetName(this->layer_param_.name().c_str());
+  myRegInfo->AddInputFeatureMap(ic, iw*ih, dt);
+  myRegInfo->AddOutputFeatureMap(oc, ow*oh, dt);
+
+  myRegInfo->Validate();
+  this->layerOp = new ComputeOp(myRegInfo, caffe::internode::data_parallelism);
+  delete myRegInfo;
+
+#endif
+
 }
+
+#ifdef USE_MLSL
+
+template <typename Dtype>
+void MKLReLULayer<Dtype>::pack_buffer(FeatureMap *fm, Dtype *to, const Dtype *from) {
+    for (int i = 0; i < fm->NumPackBlocks(); i++) {
+        BlockInfo * bi = fm->GetPackBlock(i);
+        int bMBLen = bi->MBLen();
+        int bMBStart = bi->MBStart();
+        int bFMLen = bi->FMLen();
+        int bFMStart = bi->FMStart();
+        Dtype *src = (Dtype*) from;
+        Dtype *dst = (Dtype*) (to + bi->BufOffset());
+        for (int mb = 0; mb < bMBLen; mb++) {
+            for (int fm = 0; fm < bFMLen; fm++) {
+                for (int s = 0 ; s < bi->FMSize(); s++) {
+                      dst[(fm*bMBLen + mb)*bi->FMSize() + s] =
+                          src[s*bFMLen*bMBLen + (bFMStart+fm)*bMBLen + (bMBStart+mb)];
+                }
+            }
+        }
+    }
+}
+
+template <typename Dtype>
+void MKLReLULayer<Dtype>::unpack_buffer(FeatureMap *fm, const Dtype *from, Dtype *to) {
+    for (int i = 0; i < fm->NumUnpackBlocks(); i++) {
+        BlockInfo * bi = fm->GetUnpackBlock(i);
+        int bMBLen = bi->MBLen();
+        int bMBStart = bi->MBStart();
+        int bFMLen = bi->FMLen();
+        int bFMStart = bi->FMStart();
+        Dtype *dst = (Dtype*) to;
+        Dtype *src = (Dtype*) (from + bi->BufOffset());
+        for (int mb = 0; mb < bMBLen; mb++) {
+            for (int fm = 0; fm < bFMLen; fm++) {
+                for (int s = 0 ; s < bi->FMSize(); s++) {
+                  dst[s*bFMLen*bMBLen + (bFMStart+fm)*bMBLen + (bMBStart+mb)] = src[(fm*bMBLen + mb)*bi->FMSize() + s];
+                }
+            }
+        }
+    }
+}
+
+#endif /* USE_MLSL */
 
 template <typename Dtype>
 void MKLReLULayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
-    // CHECK_EQ(top[0]->shape(), bottom[0]->shape());
+//  CHECK_EQ(top[0]->shape(), bottom[0]->shape());
     Init(bottom, top);
 }
 
@@ -185,21 +259,24 @@ void MKLReLULayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 
   if (fwd_top_data_->conversion_needed()) {
     if (bottom[0] == top[0]) {
-	  // top[0]->set_prv_data_descriptor(fwd_bottom_data_);
-      // DLOG(INFO) << "Using bottom as top (in-place) in mklReLU.";
+//      top[0]->set_prv_data_descriptor(fwd_bottom_data_);
+      DLOG(INFO) << "Using bottom as top (in-place) in mklReLU.";
     } else {
       top[0]->set_prv_data_descriptor(fwd_top_data_);
-      // DLOG(INFO) << "Using mutable_prv (out-of-place) in mklReLU.";
+      DLOG(INFO) << "Using mutable_prv (out-of-place) in mklReLU.";
     }
     relu_res[dnnResourceDst] =
             reinterpret_cast<void *>(top[0]->mutable_prv_data());
   } else {
     relu_res[dnnResourceDst] =
             reinterpret_cast<void *>(top[0]->mutable_cpu_data());
-    // DLOG(INFO) << "Using cpu_data for top in mklReLU.";
+    DLOG(INFO) << "Using cpu_data for top in mklReLU.";
   }
 
+  PERFORMANCE_MEASUREMENT_BEGIN();
   e = dnnExecute<Dtype>(reluFwd_, relu_res);
+  PERFORMANCE_MEASUREMENT_END_STATIC("FW_mkl_relu");
+
   CHECK_EQ(e, E_SUCCESS);
 }
 
@@ -224,18 +301,21 @@ void MKLReLULayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     if (bwd_bottom_diff_->conversion_needed()) {
       if (NULL != bottom[0]->get_prv_data_descriptor()) {
         bottom[0]->set_prv_diff_descriptor(fwd_bottom_data_);
-        // DLOG(INFO) << "Using top as bottom (in-place) in mklReLU-backward.";
+        DLOG(INFO) << "Using top as bottom (in-place) in mklReLU-backward.";
       } else {
         bottom[0]->set_prv_diff_descriptor(bwd_bottom_diff_);
-        // DLOG(INFO) << "Using top as bottom (in-place) in mklReLU-backward.";
+        DLOG(INFO) << "Using top as bottom (in-place) in mklReLU-backward.";
       }
       relu_res[dnnResourceDiffSrc] = bottom[0]->mutable_prv_diff();
     } else {
       relu_res[dnnResourceDiffSrc] = bottom[0]->mutable_cpu_diff();
-      // DLOG(INFO) << "Using mutable_prv (out-of-place) in mklReLU-backward.";
+      DLOG(INFO) << "Using mutable_prv (out-of-place) in mklReLU-backward.";
     }
 
+    PERFORMANCE_MEASUREMENT_BEGIN();
     e = dnnExecute<Dtype>(reluBwd_, relu_res);
+    PERFORMANCE_MEASUREMENT_END_STATIC("BW_mkl_relu");
+
     CHECK_EQ(e, E_SUCCESS);
   }
 }
