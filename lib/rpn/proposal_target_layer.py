@@ -51,7 +51,7 @@ class ProposalTargetLayer(caffe.Layer):
             (all_rois, np.hstack((zeros, gt_boxes[:, :-1])))
         )
 
-        print all_rois
+        # print all_rois
 
         # Sanity check: single batch only
         assert np.all(all_rois[:, 0] == 0), \

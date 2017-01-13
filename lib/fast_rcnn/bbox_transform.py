@@ -44,7 +44,7 @@ def bbox_transform_inv(boxes, deltas):
     dw = deltas[:, 2::4]
     dh = deltas[:, 3::4]
 
-    print deltas
+    # print deltas
 
     pred_ctr_x = dx * widths[:, np.newaxis] + ctr_x[:, np.newaxis]
     pred_ctr_y = dy * heights[:, np.newaxis] + ctr_y[:, np.newaxis]

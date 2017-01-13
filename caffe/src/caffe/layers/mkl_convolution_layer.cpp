@@ -595,7 +595,7 @@ void MKLConvolutionLayer<Dtype>::Forward_cpu(
   CHECK_EQ(status, 0) << "Forward convolution failed with status " << status;
 
   // dump conv output
-#if 1
+#if 0
   if (this->layer_param_.name().compare("rpn_conv/3x3")) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;

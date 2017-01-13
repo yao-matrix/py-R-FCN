@@ -227,7 +227,7 @@ void MKLEltwiseLayer<Dtype>::Forward_cpu(
     LOG(FATAL) << "Unknown elementwise operation.";
   }
 
-#if 1
+#if 0
   if (1 /*!this->layer_param_.name().compare("res4b3")*/) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;
