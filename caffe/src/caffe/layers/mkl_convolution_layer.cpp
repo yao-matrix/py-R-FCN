@@ -449,7 +449,7 @@ void MKLConvolutionLayer<Dtype>::Reshape(const vector<Blob<Dtype>*>& bottom,
 
   /*
   if (need_log) {
-	  timer.Start();
+      timer.Start();
   }
   */
   if (reinitialize == true) {
@@ -548,12 +548,12 @@ void MKLConvolutionLayer<Dtype>::Forward_cpu(
   bool need_log = false;
 
   if (need_log) {
-  	LOG(ERROR) << "input image number: " << n << " width: " << iw << " height: " << ih << " channel: " << ic;
-	LOG(ERROR) << "output image width: " << ow << " height: " << oh << " channel: " << oc;
+      LOG(ERROR) << "input image number: " << n << " width: " << iw << " height: " << ih << " channel: " << ic;
+      LOG(ERROR) << "output image width: " << ow << " height: " << oh << " channel: " << oc;
   }
 
   if (need_log) {
-  	timer.Start();
+      timer.Start();
   }
 
   void *res_convolutionFwd[dnnResourceNumber];
@@ -597,8 +597,8 @@ void MKLConvolutionLayer<Dtype>::Forward_cpu(
   // dump conv output
 #if 0
   static int cnt = 0;
-  if (cnt == 0) {
-    FILE *fp = fopen("./conv1_mkl.txt", "wb");
+  if (!this->layer_param_.name().compare("rpn_conv/3x3") && cnt == 0) {
+    FILE *fp = fopen("./rpn_conv_mkl.txt", "wb");
     const Dtype* top_data = top[0]->cpu_data();
     int i = 0;
     for (int n = 0; n < top[0]->num(); n++) {
@@ -611,6 +611,13 @@ void MKLConvolutionLayer<Dtype>::Forward_cpu(
         }
       }
     }
+   fclose(fp);
+
+   // print weights
+   FILE *fp = fopen("./rpn_conv_mkl_weights.txt", "wb");
+   for (int n = 0; n < this->blobs_[0].count(); n++) {
+      fprintf(fp, "%.2f, ", this->blobs_[0]->cpu_data()[n]);
+   }
    fclose(fp);
   }
   cnt++;

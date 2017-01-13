@@ -107,8 +107,8 @@ void ConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   // dump conv output
 #if 0
   static int cnt = 0;
-  if (cnt == 0) {
-    FILE *fp = fopen("./conv1_cpu.txt", "wb");
+  if (!this->layer_param_.name().compare("rpn_conv/3x3") && cnt == 0) {
+    FILE *fp = fopen("./rpn_conv_cpu.txt", "wb");
     const Dtype* top_data = top[0]->cpu_data();
     int i = 0;
     for (int n = 0; n < top[0]->num(); n++) {
@@ -121,6 +121,13 @@ void ConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
         }
       }
     }
+   fclose(fp);
+
+   // print weights
+   FILE *fp = fopen("./rpn_conv_cpu_weights.txt", "wb");
+   for (int n = 0; n < this->blobs_[0].count(); n++) {
+      fprintf(fp, "%.2f, ", this->blobs_[0]->cpu_data()[n]);
+   }
    fclose(fp);
   }
   cnt++;
