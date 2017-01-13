@@ -226,6 +226,69 @@ void MKLEltwiseLayer<Dtype>::Forward_cpu(
   default:
     LOG(FATAL) << "Unknown elementwise operation.";
   }
+
+#if 1
+  if (1 /*!this->layer_param_.name().compare("res4b3")*/) {
+    LOG(ERROR) << this->layer_param_.name();
+    FILE *fp = NULL;
+#if 1
+    char dump_name[256] = {};
+    sprintf(dump_name, "./%s_mkl_in.txt", this->layer_param_.name().c_str());
+    fp = fopen(dump_name, "ab+");
+    const Dtype* bottom_data = bottom[0]->cpu_data();
+    int i = 0;
+    for (int n = 0; n < bottom[0]->num(); n++) {
+      for (int c = 0; c < 1; c++) {
+        for (int h = 0; h < bottom[0]->height(); h++) {
+          for (int w = 0; w < bottom[0]->width(); w++) {
+            fprintf(fp, "%.2f, ", bottom_data[i]);
+            i++;
+          }
+        }
+      }
+    }
+   fprintf(fp, "\n");
+   fclose(fp);
+   if (isnan(bottom_data[0])) {
+       LOG(ERROR) << "Elt NAN";
+       exit(-1);
+   }
+   fp = NULL;
+    
+   sprintf(dump_name, "./%s_mkl_out.txt", this->layer_param_.name().c_str());
+    fp = fopen(dump_name, "ab+");
+    const Dtype* top_data = top[0]->cpu_data();
+    for (int n = 0; n < top[0]->num(); n++) {
+      for (int c = 0; c < 1; c++) {
+        for (int h = 0; h < top[0]->height(); h++) {
+          for (int w = 0; w < top[0]->width(); w++) {
+            fprintf(fp, "%.2f, ", top_data[i]);
+            i++;
+          }
+        }
+      }
+    }
+   fprintf(fp, "\n");
+   fclose(fp);
+   if (isnan(top_data[0])) {
+       LOG(ERROR) << "Elt NAN";
+       exit(-1);
+   }
+   fp = NULL;
+#endif
+
+#if 0
+   // print weights
+   fp = fopen("./rpn_conv_mkl_weights.txt", "ab+");
+   for (int n = 0; n < 100; n++) {
+      fprintf(fp, "%.2f, ", this->blobs_[0]->cpu_data()[n]);
+   }
+   fprintf(fp, "\n");
+   fclose(fp);
+   fp = NULL;
+#endif
+  }
+#endif
 }
 
 template <typename Dtype>

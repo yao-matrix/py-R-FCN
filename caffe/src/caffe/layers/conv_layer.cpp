@@ -105,10 +105,12 @@ void ConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   }
 
   // dump conv output
-#if 0
+#if 1
   static int cnt = 0;
-  if (!this->layer_param_.name().compare("rpn_conv/3x3") && cnt == 0) {
-    FILE *fp = fopen("./rpn_conv_cpu.txt", "wb");
+  if (!this->layer_param_.name().compare("rpn_conv/3x3")) {
+    FILE *fp = NULL;
+#if 1
+    fp = fopen("./rpn_conv_cpu.txt", "ab+");
     const Dtype* top_data = top[0]->cpu_data();
     int i = 0;
     for (int n = 0; n < top[0]->num(); n++) {
@@ -121,16 +123,23 @@ void ConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
         }
       }
     }
+   fprintf(fp, "\n");
    fclose(fp);
+   fp = NULL;
+#endif
 
+#if 0
    // print weights
-   FILE *fp = fopen("./rpn_conv_cpu_weights.txt", "wb");
-   for (int n = 0; n < this->blobs_[0].count(); n++) {
+   fp = fopen("./rpn_conv_cpu_weights.txt", "ab+");
+   for (int n = 0; n < 100; n++) {
       fprintf(fp, "%.2f, ", this->blobs_[0]->cpu_data()[n]);
    }
+   fprintf(fp, "\n");
    fclose(fp);
+   fp = NULL;
+#endif
+   cnt++;
   }
-  cnt++;
 #endif
 
   // LOG(ERROR) << "forward total takes: " << timer.MicroSeconds() / 1000. << " ms";

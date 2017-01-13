@@ -556,7 +556,7 @@ void MKLConvolutionLayer<Dtype>::Forward_cpu(
       timer.Start();
   }
 
-  void *res_convolutionFwd[dnnResourceNumber];
+  void *res_convolutionFwd[dnnResourceNumber] = {NULL};
   res_convolutionFwd[dnnResourceSrc] =
     fwd_bottom_data->get_converted_prv(bottom[0], false);
   res_convolutionFwd[dnnResourceFilter] =
@@ -595,12 +595,40 @@ void MKLConvolutionLayer<Dtype>::Forward_cpu(
   CHECK_EQ(status, 0) << "Forward convolution failed with status " << status;
 
   // dump conv output
-#if 0
-  static int cnt = 0;
-  if (!this->layer_param_.name().compare("rpn_conv/3x3") && cnt == 0) {
-    FILE *fp = fopen("./rpn_conv_mkl.txt", "wb");
-    const Dtype* top_data = top[0]->cpu_data();
+#if 1
+  if (this->layer_param_.name().compare("rpn_conv/3x3")) {
+    LOG(ERROR) << this->layer_param_.name();
+    FILE *fp = NULL;
+#if 1
+    char dump_name[256] = {0};
+    sprintf(dump_name, "./%s_mkl_in.txt", this->layer_param_.name().c_str());
+    fp = fopen(dump_name, "ab+");
+    const Dtype* bottom_data = bottom[0]->cpu_data();
     int i = 0;
+
+    for (int n = 0; n < bottom[0]->num(); n++) {
+      for (int c = 0; c < 1; c++) {
+        for (int h = 0; h < bottom[0]->height(); h++) {
+          for (int w = 0; w < bottom[0]->width(); w++) {
+            fprintf(fp, "%.2f, ", bottom_data[i]);
+            i++;
+          }
+        }
+      }
+    }
+   fprintf(fp, "\n");
+   if (isnan(bottom_data[0])) {
+   LOG(ERROR) << "NAN";  
+   exit(-1);
+    }
+   fclose(fp);
+   fp = NULL;
+
+    sprintf(dump_name, "./%s_mkl_out.txt", this->layer_param_.name().c_str());
+    fp = fopen(dump_name, "ab+");
+    const Dtype* top_data = top[0]->cpu_data();
+    i = 0;
+
     for (int n = 0; n < top[0]->num(); n++) {
       for (int c = 0; c < 1; c++) {
         for (int h = 0; h < top[0]->height(); h++) {
@@ -611,16 +639,37 @@ void MKLConvolutionLayer<Dtype>::Forward_cpu(
         }
       }
     }
+   fprintf(fp, "\n");
+   if (isnan(top_data[0]) || top_data[0] > 1000 || top_data[0] < -1000) {
+   LOG(ERROR) << "abnormal";  
+   exit(-1);
+    }
    fclose(fp);
+   fp = NULL;
+#endif
 
+#if 1
    // print weights
-   FILE *fp = fopen("./rpn_conv_mkl_weights.txt", "wb");
-   for (int n = 0; n < this->blobs_[0].count(); n++) {
+   sprintf(dump_name, "./%s_mkl_weights.txt", this->layer_param_.name().c_str());
+   fp = fopen(dump_name, "ab+");
+   for (int n = 0; n < 100; n++) {
       fprintf(fp, "%.2f, ", this->blobs_[0]->cpu_data()[n]);
    }
+   fprintf(fp, "\n");
    fclose(fp);
+   fp = NULL;
+
+   if (this->bias_term_) {
+   sprintf(dump_name, "./%s_mkl_biases.txt", this->layer_param_.name().c_str());
+   fp = fopen(dump_name, "ab+");
+   for (int n = 0; n < this->blobs_[1]->count(); n++) {
+      fprintf(fp, "%.2f, ", this->blobs_[1]->cpu_data()[n]);
+   }
+   fprintf(fp, "\n");
+   fclose(fp);
+   fp = NULL; }
+#endif
   }
-  cnt++;
 #endif
 
 
