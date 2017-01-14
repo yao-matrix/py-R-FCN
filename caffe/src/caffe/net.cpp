@@ -1096,58 +1096,23 @@ void Net<Dtype>::AppendParam(const NetParameter& param, const int layer_id,
   }
 }
 
-int iter_cnt = 0;
-std::vector<double> forward_time_per_layer(600, 0.0);
-std::vector<double> backward_time_per_layer(600, 0.0);
-
-Timer forward_iter_timer;
-Timer backward_iter_timer;
-Timer total_timer;
-Timer forward_timer;
-Timer backward_timer;
-
-double forward_time = 0.0;
-double backward_time = 0.0;
-const int FLAGS_iterations = 20;
 
 
 template <typename Dtype>
 Dtype Net<Dtype>::ForwardFromTo(int start, int end) {
   CHECK_GE(start, 0);
   CHECK_LT(end, layers_.size());
-  
-  if (time_info_) {
-	forward_timer.Start();
-	if (iter_cnt == 1) {
-          total_timer.Start();
-        }
-  }
-  
   Dtype loss = 0;
   for (int i = start; i <= end; ++i) {
-	if (time_info_ && iter_cnt >= 1) {
-	    forward_iter_timer.Start();
-	    // LOG(ERROR) << "Forwarding " << layer_names_[i] << " start";
-	}
+    PERFORMANCE_MEASUREMENT_BEGIN();
 
     // LOG(ERROR) << layer_names_[i] << " forward start";
     Dtype layer_loss = layers_[i]->Forward(bottom_vecs_[i], top_vecs_[i]);
     // LOG(ERROR) << layer_names_[i] << " forward done";
+
+    PERFORMANCE_MEASUREMENT_END((std::string("FW_") + layer_names_[i]).c_str());
     loss += layer_loss;
-
-	if (time_info_ && iter_cnt >= 1) {
-		double time_cost = forward_iter_timer.MicroSeconds();
-		forward_time_per_layer[i] += time_cost;
-		LOG(ERROR) << "Forwarding " << layer_names_[i] << " " << time_cost / 1000. << " ms";
-	}
-
-    if (debug_info_) {
-		ForwardDebugInfo(i);
-	}
-  }
-
-  if (time_info_) {
-  	forward_time += forward_timer.MicroSeconds();
+    if (debug_info_) { ForwardDebugInfo(i); }
   }
   return loss;
 }
@@ -1191,48 +1156,18 @@ template <typename Dtype>
 void Net<Dtype>::BackwardFromTo(int start, int end) {
   CHECK_GE(end, 0);
   CHECK_LT(start, layers_.size());
-  if (time_info_ && iter_cnt >= 1) {backward_timer.Start();}
   for (int i = start; i >= end; --i) {
     if (layer_need_backward_[i]) {
-	  if (time_info_ && iter_cnt >= 1) {backward_iter_timer.Start();}
+      PERFORMANCE_MEASUREMENT_BEGIN();
+
       layers_[i]->Backward(
           top_vecs_[i], bottom_need_backward_[i], bottom_vecs_[i]);
+
+      PERFORMANCE_MEASUREMENT_END((std::string("BW_")+layer_names_[i]).c_str());
+
       if (debug_info_) { BackwardDebugInfo(i); }
-	  if (time_info_ && iter_cnt >= 1) {
-		  double time_cost = backward_iter_timer.MicroSeconds();
-		  backward_time_per_layer[i] += time_cost;
-		  // LOG(ERROR) << "Backwarding " << layer_names_[i] << " " << time_cost / 1000 << " ms";
-	  }
     }
   }
-  if (time_info_) {
-  	backward_time += backward_timer.MicroSeconds();
-	iter_cnt ++;
-
-	LOG(ERROR) << "##################### Iteration : " << iter_cnt;
-	if (iter_cnt == FLAGS_iterations) {
-		LOG(ERROR) << "Average time per layer: ";
-		for (int i = 0; i < layers_.size(); ++i) {
-		const caffe::string& layername = layers_[i]->layer_param().name();
-		LOG(ERROR) << std::setfill(' ') << std::setw(10) << layername <<
-		  "\tforward: " << forward_time_per_layer[i] / 1000 /
-		  FLAGS_iterations << " ms.";
-		LOG(ERROR) << std::setfill(' ') << std::setw(10) << layername  <<
-		  "\tbackward: " << backward_time_per_layer[i] / 1000 /
-		  FLAGS_iterations << " ms.";
-		}
-		
-		LOG(ERROR) << "Average Forward pass: " << forward_time / 1000 /
-		(FLAGS_iterations - 1) << " ms.";
-		LOG(ERROR) << "Average Backward pass: " << backward_time / 1000 /
-		(FLAGS_iterations - 1) << " ms.";
-		LOG(ERROR) << "Average Forward-Backward: " << total_timer.MilliSeconds() /
-		(FLAGS_iterations - 1) << " ms.";
-		LOG(ERROR) << "Total Time: " << total_timer.MilliSeconds() << " ms.";
-		LOG(ERROR) << "*** Benchmark ends ***";
-		exit(0);
-		}
-  	}
 }
 
 template <typename Dtype>
@@ -1358,10 +1293,7 @@ void Net<Dtype>::BackwardTo(int end) {
 
 template <typename Dtype>
 void Net<Dtype>::Backward() {
-  // Timer timer;
-  // timer.Start();
   BackwardFromTo(layers_.size() - 1, 0);
-  // LOG(ERROR) << "backward takes: " << timer.MicroSeconds() / 1000. << " ms";
   if (debug_info_) {
     Dtype asum_data = 0, asum_diff = 0, sumsq_data = 0, sumsq_diff = 0;
     for (int i = 0; i < learnable_params_.size(); ++i) {

@@ -67,41 +67,25 @@ void ConvolutionLayer<Dtype>::compute_output_shape() {
 template <typename Dtype>
 void ConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
-
-  // LOG(ERROR) << "input: [" << bottom[0]->num() << ", " << bottom[0]->channels() << ", " << bottom[0]->height() << ", " << bottom[0]->width() << "]";
-  // LOG(ERROR) << "output: [" << top[0]->num() << ", " << top[0]->channels() << ", " << top[0]->height() << ", " << top[0]->width() << "]";
-  // LOG(ERROR) << "filter: [" << this->kernel_shape_.cpu_data()[0] << ", " << this->kernel_shape_.cpu_data()[1] << "]";
-  // LOG(ERROR) << "stride: [" << this->stride_.cpu_data()[0] << ", " << this->stride_.cpu_data()[1] << "]";
-  // LOG(ERROR) << "dilation: [" << this->dilation_.cpu_data()[0] << ", " << this->dilation_.cpu_data()[1] << "]";
-
-  // Timer timer, timer2;
-  // timer.Start();
-
   const Dtype* weight = this->blobs_[0]->cpu_data();
   // If we have more threads available than batches to be prcessed then
   // we are wasting resources (lower batches than 36 on XeonE5)
   // So we instruct MKL
-  // LOG(ERROR) << "bottom size: " << bottom.size();
   for (int i = 0; i < bottom.size(); ++i) {
-    // timer2.Start();
     const Dtype* bottom_data = bottom[i]->cpu_data();
     Dtype* top_data = top[i]->mutable_cpu_data();
-    // LOG(ERROR) << "get data takes: " << timer2.MicroSeconds() / 1000. << " ms";
-    // timer2.Start();
-// #ifdef _OPENMP
-//    #pragma omp parallel for num_threads(this->num_of_threads_)
-// #endif
+#ifdef _OPENMP
+    #pragma omp parallel for num_threads(this->num_of_threads_)
+#endif
       for (int n = 0; n < this->num_; ++n) {
-        this->forward_cpu_gemm(bottom_data + n * this->bottom_dim_,
+        this->forward_cpu_gemm(bottom_data + n*this->bottom_dim_,
                                weight,
-                               top_data + n * this->top_dim_);
-        // LOG(ERROR) << "mkl thread number: " << omp_get_max_threads();
+                               top_data + n*this->top_dim_);
         if (this->bias_term_) {
           const Dtype* bias = this->blobs_[1]->cpu_data();
           this->forward_cpu_bias(top_data + n * this->top_dim_, bias);
         }
       }
-      // LOG(ERROR) << "forward GEMM takes: " << timer2.MicroSeconds() / 1000. << " ms";
   }
 
   // dump conv output
@@ -148,19 +132,12 @@ void ConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 template <typename Dtype>
 void ConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
-  // Timer timer;
-  // timer.Start();
   const Dtype* weight = this->blobs_[0]->cpu_data();
   Dtype* weight_diff = this->blobs_[0]->mutable_cpu_diff();
-  // LOG(ERROR) << "get weight data takes: " << timer.MicroSeconds() / 1000. << " ms";
-  // timer.Start();
   for (int i = 0; i < top.size(); ++i) {
-    // Timer timer2;
-    // timer2.Start();
     const Dtype* top_diff = top[i]->cpu_diff();
     const Dtype* bottom_data = bottom[i]->cpu_data();
     Dtype* bottom_diff = bottom[i]->mutable_cpu_diff();
-    // LOG(ERROR) << "get data takes: " << timer2.MicroSeconds() / 1000. << " ms";
     // Bias gradient, if necessary.
     if (this->bias_term_ && this->param_propagate_down_[1]) {
       Dtype* bias_diff = this->blobs_[1]->mutable_cpu_diff();
@@ -174,47 +151,43 @@ void ConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     // so bigger buffer (weight_diff_mt) hase to be cleared out
     // before GEMM ops and results has to be summed up after GEMM ops.
 
-    // timer2.Start();
     if (this->param_propagate_down_[0]) {
-// #ifdef _OPENMP
-//      this->clear_weight_mt();
-//      #pragma omp parallel num_threads(this->num_of_threads_)
-// #endif
+#ifdef _OPENMP
+      this->clear_weight_mt();
+      #pragma omp parallel num_threads(this->num_of_threads_)
+#endif
       {
-// #ifdef _OPENMP
-//         #pragma omp for
-// #endif
+#ifdef _OPENMP
+        #pragma omp for
+#endif
         for (int n = 0; n < this->num_; ++n) {
           // gradient w.r.t. weight. Note that we will accumulate diffs.
           this->weight_cpu_gemm(bottom_data + n * this->bottom_dim_,
                 top_diff + n * this->top_dim_, weight_diff);
         }
 
-// #ifdef _OPENMP
-//        this->sum_weight_mt(weight_diff);
-// #endif
+#ifdef _OPENMP
+        this->sum_weight_mt(weight_diff);
+#endif
       }
     }
-    // LOG(ERROR) << "weight back propagation takes: " << timer2.MicroSeconds() / 1000. << " ms";
-    // timer2.Start();
-	// LOG(ERROR) << this->layer_param_.name() << " blob: " << i << " propagate down: " << propagate_down[i];
+
     if (propagate_down[i]) {
-// #ifdef _OPENMP
-//       #pragma omp parallel for num_threads(this->num_of_threads_)
-// #endif
+#ifdef _OPENMP
+      #pragma omp parallel for num_threads(this->num_of_threads_)
+#endif
         for (int n = 0; n < this->num_; ++n) {
           // gradient w.r.t. bottom data, if necessary.
           this->backward_cpu_gemm(top_diff + n * this->top_dim_, weight,
               bottom_diff + n * this->bottom_dim_);
         }
     }
-   // LOG(ERROR) << "data back propagation takes: " << timer2.MicroSeconds() / 1000. << " ms";
   }
 
 #ifdef USE_MLSL
   this->on_delinp_ready(propagate_down);
 #endif /* USE_MLSL */
-  // LOG(ERROR) << "backward total takes: " << timer.MicroSeconds() / 1000. << " ms";
+
 }
 
 #ifdef CPU_ONLY

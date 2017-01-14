@@ -329,21 +329,7 @@ template <typename Dtype>
 void MKLEltwiseLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
 
-  const Dtype* top_diff = top[0]->prv_diff();
-  int count = 0;
-  bool is_top_diff_prv = false;
-
-  // If there is no diff in prv layout
-  // then we are given cpu layout
-  // and we will produce bottom at cpu layout as well
-  if (top_diff == NULL) {
-    top_diff = top[0]->cpu_diff();
-    count = top[0]->count();
-  } else {
-    count = top[0]->prv_diff_count();
-    is_top_diff_prv = true;
-  }
-  Dtype* bottom_diff = NULL;
+  bool is_top_diff_prv = top[0]->prv_diff() == NULL ? false : true;
 
   for (int i = 0; i < bottom.size(); ++i) {
     if (propagate_down[i]) {
@@ -351,27 +337,15 @@ void MKLEltwiseLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
       case EltwiseParameter_EltwiseOp_SUM:
         CHECK_EQ(coeffs_[i], Dtype(1)) << "Not supported yet";
         if (is_top_diff_prv == false) {
-          // option 1: copy solution
-          bottom_diff = bottom[i]->mutable_cpu_diff();
-          caffe_copy(count, top_diff, bottom_diff);
-
-          // option 2: zero-copy solution
-          // bottom[i]->ShareDiff(*top[0]);
+          bottom[i]->set_cpu_diff(top[0]->mutable_cpu_diff());
         } else {
-          if ((!bwd_bottom_diff[i]->layout_int) || 
-		      (bwd_bottom_diff[i]->layout_compare(top[0]->get_prv_diff_descriptor()) == false) ) {
+          if (!bwd_bottom_diff[i]->layout_int) {
             bwd_bottom_diff[i]->create_internal_layout(sumPrimitive,
               (dnnResourceType_t)(dnnResourceMultipleSrc + i));
           }
           CHECK_EQ(true, bwd_bottom_diff[i]->layout_compare(
                   top[0]->get_prv_diff_descriptor()));
-          // option 1: copy solution
-		  bottom[i]->set_prv_diff_descriptor(bwd_bottom_diff[i]);
-          bottom_diff = bottom[i]->mutable_prv_diff();
-		  caffe_copy(count, top_diff, bottom_diff);
-
-		  // option 2: zero-copy solution
-		  // bottom[i]->set_prv_diff_descriptor(top[0]->get_prv_diff_descriptor(), true);
+          bottom[i]->set_prv_diff_descriptor(top[0]->get_prv_diff_descriptor(), true);
         }
         break;
       case EltwiseParameter_EltwiseOp_MAX:

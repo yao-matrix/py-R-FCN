@@ -150,15 +150,9 @@ void SGDSolver<Dtype>::ApplyUpdate() {
     LOG(INFO) << "Iteration " << this->iter_ << ", lr = " << rate;
   }
   ClipGradients();
-  int learnable_param_size = this->net_->learnable_params().size();
-
-// #ifdef _OPENMP
-// #pragma omp for
-// #endif
-  for (int param_id = 0; param_id < learnable_param_size; ++param_id) {
-	// LOG(ERROR) << "update param: " << param_id;
+  for (int param_id = 0; param_id < this->net_->learnable_params().size();
+       ++param_id) {
     ApplyUpdate(param_id);
-	// LOG(ERROR) << "update param: " << param_id << " done";
   }
 }
 
