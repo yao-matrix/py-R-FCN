@@ -1397,7 +1397,7 @@ void Net<Dtype>::CopyTrainedLayersFrom(const NetParameter& param) {
       ++target_layer_id;
     }
     if (target_layer_id == layer_names_.size()) {
-      LOG(ERROR) << "Ignoring source layer " << source_layer_name;
+      LOG(INFO) << "Ignoring source layer " << source_layer_name;
       continue;
     }
     // LOG(ERROR) << "Copying source layer " << source_layer_name << " to " << layer_names_[target_layer_id];
