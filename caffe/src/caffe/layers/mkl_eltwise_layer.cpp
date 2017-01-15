@@ -226,7 +226,8 @@ void MKLEltwiseLayer<Dtype>::Forward_cpu(
 
   switch (op_) {
   case EltwiseParameter_EltwiseOp_SUM:
-    void *eltwise_res[dnnResourceNumber];
+   {
+    void* eltwise_res[dnnResourceNumber] = {NULL,};
     for (int i = 0; i < num_bottoms; ++i) {
       if (fwd_bottom_data[i]->convert_to_int) {
         eltwise_res[dnnResourceMultipleSrc + i] =
@@ -252,7 +253,7 @@ void MKLEltwiseLayer<Dtype>::Forward_cpu(
       PERFORMANCE_MEASUREMENT_END_STATIC("FW_mkl_eltwise");
     }
     CHECK_EQ(e, E_SUCCESS);
-
+    }
     break;
   case EltwiseParameter_EltwiseOp_PROD:
   case EltwiseParameter_EltwiseOp_MAX:
@@ -281,15 +282,15 @@ void MKLEltwiseLayer<Dtype>::Forward_cpu(
         }
       }
     }
-   fprintf(fp, "\n");
-   fclose(fp);
-   if (isnan(bottom_data[0])) {
+    fprintf(fp, "\n");
+    fclose(fp);
+    fp = NULL;
+    if (isnan(bottom_data[0])) {
        LOG(ERROR) << "Elt NAN";
        exit(-1);
-   }
-   fp = NULL;
-    
-   sprintf(dump_name, "./%s_mkl_out.txt", this->layer_param_.name().c_str());
+    }
+
+    sprintf(dump_name, "./%s_mkl_out.txt", this->layer_param_.name().c_str());
     fp = fopen(dump_name, "ab+");
     const Dtype* top_data = top[0]->cpu_data();
     for (int n = 0; n < top[0]->num(); n++) {
@@ -302,24 +303,25 @@ void MKLEltwiseLayer<Dtype>::Forward_cpu(
         }
       }
     }
-   fprintf(fp, "\n");
-   fclose(fp);
-   if (isnan(top_data[0])) {
+    fprintf(fp, "\n");
+    fclose(fp);
+    fp = NULL;
+    if (isnan(top_data[0])) {
        LOG(ERROR) << "Elt NAN";
        exit(-1);
-   }
-   fp = NULL;
+    }
 #endif
 
 #if 0
-   // print weights
-   fp = fopen("./rpn_conv_mkl_weights.txt", "ab+");
-   for (int n = 0; n < 100; n++) {
+    // print weights
+    sprintf(dump_name, "./%s_mkl_weights.txt", this->layer_param_.name().c_str());
+    fp = fopen(dump_name, "ab+");
+    for (int n = 0; n < 100; n++) {
       fprintf(fp, "%.2f, ", this->blobs_[0]->cpu_data()[n]);
-   }
-   fprintf(fp, "\n");
-   fclose(fp);
-   fp = NULL;
+    }
+    fprintf(fp, "\n");
+    fclose(fp);
+    fp = NULL;
 #endif
   }
 #endif

@@ -108,10 +108,10 @@ void SGDSolver<Dtype>::PreSolve() {
   temp_.clear();
   // LOG(ERROR) << "net param size: "<< net_params.size();
   for (int i = 0; i < net_params.size(); ++i) {
-	// if (!net_params[i]) {
-	//	LOG(ERROR) << "NULL net params";
-	//	continue;
-	// }
+    // if (!net_params[i]) {
+    //	LOG(ERROR) << "NULL net params";
+    //	continue;
+    // }
     const vector<int>& shape = net_params[i]->shape();
 
     // TODO: allocate these buffers taking into account owned_count to reduce memory footprint

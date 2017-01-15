@@ -484,7 +484,7 @@ void MKLConvolutionLayer<Dtype>::Forward_cpu(
   CHECK_EQ(status, 0) << "Forward convolution failed with status " << status;
 
   // dump conv output
-#if 0
+#if 1
   if (this->layer_param_.name().compare("rpn_conv/3x3")) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;
@@ -492,47 +492,40 @@ void MKLConvolutionLayer<Dtype>::Forward_cpu(
     char dump_name[256] = {0};
     sprintf(dump_name, "./%s_mkl_in.txt", this->layer_param_.name().c_str());
     fp = fopen(dump_name, "ab+");
-    const Dtype* bottom_data = bottom[0]->cpu_data();
-    int i = 0;
 
     for (int n = 0; n < bottom[0]->num(); n++) {
-      for (int c = 0; c < 1; c++) {
-        for (int h = 0; h < bottom[0]->height(); h++) {
-          for (int w = 0; w < bottom[0]->width(); w++) {
-            fprintf(fp, "%.2f, ", bottom_data[i]);
-            i++;
+      for (int c = 0; c < bottom[0]->channels(); c++) {
+        for (int h = 0; h < this->blobs_[0]->height(); h++) {
+          for (int w = 0; w < this->blobs_[0]->width(); w++) {
+            fprintf(fp, "%f, ", bottom[0]->data_at(n, c, h, w));
           }
         }
       }
     }
    fprintf(fp, "\n");
-   if (isnan(bottom_data[0])) {
-   LOG(ERROR) << "NAN";  
-   exit(-1);
-    }
+   if (isnan(bottom[0]->data_at(0, 0, 0, 0)) || bottom[0]->data_at(0, 0, 0, 0) > 1000 || bottom[0]->data_at(0, 0, 0, 0) < -1000) {
+     LOG(ERROR) << "bottom abnormal";
+     exit(-1);
+   }
    fclose(fp);
    fp = NULL;
 
     sprintf(dump_name, "./%s_mkl_out.txt", this->layer_param_.name().c_str());
     fp = fopen(dump_name, "ab+");
-    const Dtype* top_data = top[0]->cpu_data();
-    i = 0;
-
     for (int n = 0; n < top[0]->num(); n++) {
       for (int c = 0; c < 1; c++) {
-        for (int h = 0; h < top[0]->height(); h++) {
-          for (int w = 0; w < top[0]->width(); w++) {
-            fprintf(fp, "%.2f, ", top_data[i]);
-            i++;
+        for (int h = 0; h < 1; h++) {
+          for (int w = 0; w < 1; w++) {
+            fprintf(fp, "%f, ", top[0]->data_at(n, c, h, w));
           }
         }
       }
     }
    fprintf(fp, "\n");
-   if (isnan(top_data[0]) || top_data[0] > 1000 || top_data[0] < -1000) {
-   LOG(ERROR) << "abnormal";  
-   exit(-1);
-    }
+   if (isnan(top[0]->data_at(0, 0, 0, 0)) || top[0]->data_at(0, 0, 0, 0) > 1000 || top[0]->data_at(0, 0, 0, 0) < -1000) {
+     LOG(ERROR) << "top abnormal";
+     exit(-1);
+   }
    fclose(fp);
    fp = NULL;
 #endif
@@ -541,26 +534,33 @@ void MKLConvolutionLayer<Dtype>::Forward_cpu(
    // print weights
    sprintf(dump_name, "./%s_mkl_weights.txt", this->layer_param_.name().c_str());
    fp = fopen(dump_name, "ab+");
-   for (int n = 0; n < 100; n++) {
-      fprintf(fp, "%.2f, ", this->blobs_[0]->cpu_data()[n]);
+   // LOG(ERROR) << "[" << this->blobs_[0]->num() << ", " << this->blobs_[0]->channels() << ", " << this->blobs_[0]->height() << ", " << this->blobs_[0]->width() << "]";
+   for (int n = 0; n < 1; n++) {
+     for (int c = 0; c < this->blobs_[0]->channels(); c++) {
+       for (int h = 0; h < this->blobs_[0]->height(); h++) {
+         for (int w = 0; w < this->blobs_[0]->width(); w++) {
+            fprintf(fp, "%f, ", this->blobs_[0]->data_at(n, c, h, w));
+         }
+       }
+     }
    }
    fprintf(fp, "\n");
    fclose(fp);
    fp = NULL;
 
    if (this->bias_term_) {
-   sprintf(dump_name, "./%s_mkl_biases.txt", this->layer_param_.name().c_str());
-   fp = fopen(dump_name, "ab+");
-   for (int n = 0; n < this->blobs_[1]->count(); n++) {
-      fprintf(fp, "%.2f, ", this->blobs_[1]->cpu_data()[n]);
+     sprintf(dump_name, "./%s_mkl_biases.txt", this->layer_param_.name().c_str());
+     fp = fopen(dump_name, "ab+");
+     for (int n = 0; n < this->blobs_[1]->count(); n++) {
+        fprintf(fp, "%f, ", this->blobs_[1]->cpu_data()[n]);
+     }
+     fprintf(fp, "\n");
+     fclose(fp);
+     fp = NULL;
    }
-   fprintf(fp, "\n");
-   fclose(fp);
-   fp = NULL; }
 #endif
   }
 #endif
-
 }
 
 template <typename Dtype>

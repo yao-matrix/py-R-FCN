@@ -185,7 +185,7 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
 	// LOG(ERROR) << "layer: " << layer_param.name() << " setup start";
     if (param.engine() != "") {
 	  // XXX: Matrix: force some convolution layers to CAFFE engine here to WR performance issue
-	  if (0
+	  if (
           // !layer_param.name().compare("conv1") ||
           // !layer_param.name().compare("rpn_cls_score") ||
           // !layer_param.name().compare("rpn_bbox_pred") ||
@@ -196,7 +196,8 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
           // !layer_param.name().compare("res3a_branch2a") ||
           // !layer_param.name().compare("rpn_bbox_pred")
           // !layer_param.type().compare("BatchNorm")
-          // !layer_param.type().compare("Convolution")
+          !layer_param.type().compare("Convolution")
+          // !layer_param.type().compare("Eltwise")
           // !layer_param.type().compare("Pooling")
          ) {
 	     // LOG(ERROR) << layer_param.name() << " use CAFFE Engine";
@@ -329,6 +330,11 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
     CHECK_LE(param_size, num_param_blobs)
         << "Too many params specified for layer " << layer_param.name();
     ParamSpec default_param_spec;
+#if 0
+    if (!layer_param.type().compare("BatchNorm")) {
+      LOG(ERROR) << layer_param.name() << ": param_blob number[" << num_param_blobs << "], param number[" << param_size << "]";
+    }
+#endif
     for (int param_id = 0; param_id < num_param_blobs; ++param_id) {
       const ParamSpec* param_spec = (param_id < param_size) ?
           &layer_param.param(param_id) : &default_param_spec;
@@ -1029,9 +1035,9 @@ void Net<Dtype>::AppendParam(const NetParameter& param, const int layer_id,
       param_names_index_[param_name] = net_param_id;
     }
     const int learnable_param_id = learnable_params_.size();
-	if (!params_[net_param_id].get()) {
-		LOG(FATAL) << "layer: " << layer_names_[layer_id] << " param: " << param_name << " is NULL";
-	}
+    if (!params_[net_param_id].get()) {
+	LOG(FATAL) << "layer: " << layer_names_[layer_id] << " param: " << param_name << " is NULL";
+    }
     learnable_params_.push_back(params_[net_param_id].get());
     learnable_param_ids_.push_back(learnable_param_id);
     has_params_lr_.push_back(param_spec->has_lr_mult());
@@ -1336,6 +1342,7 @@ void Net<Dtype>::CopyTrainedLayersFrom(const NetParameter& param) {
     // LOG(ERROR) << "Source layer type: " << source_layer.type() << ", Source layer engine: " << source_layer.batch_norm_param().engine() << ", Solution engine: " << param.engine();
     vector<shared_ptr<Blob<Dtype> > >& target_blobs = layers_[target_layer_id]->blobs();
 
+#if 1
     if (source_layer.type().compare("BatchNorm") == 0) {
       const LayerParameter& target_layer = layers_[target_layer_id]->layer_param();
       std::vector<const LayerParameter*> consumer_layer_params;
@@ -1367,8 +1374,9 @@ void Net<Dtype>::CopyTrainedLayersFrom(const NetParameter& param) {
 	      }
             }
             continue;
-	  }
+      }
     }
+#endif
 
     CHECK_EQ(target_blobs.size(), source_layer.blobs_size())
         << "Incompatible number of blobs for layer " << source_layer_name;

@@ -90,42 +90,82 @@ void ConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 
   // dump conv output
 #if 1
-  static int cnt = 0;
-  if (!this->layer_param_.name().compare("rpn_conv/3x3")) {
+  if (this->layer_param_.name().compare("rpn_conv/3x3")) {
+    LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;
 #if 1
-    fp = fopen("./rpn_conv_cpu.txt", "ab+");
-    const Dtype* top_data = top[0]->cpu_data();
-    int i = 0;
-    for (int n = 0; n < top[0]->num(); n++) {
-      for (int c = 0; c < 1; c++) {
-        for (int h = 0; h < top[0]->height(); h++) {
-          for (int w = 0; w < top[0]->width(); w++) {
-            fprintf(fp, "%.2f, ", top_data[i]);
-            i++;
+    char dump_name[256] = {0};
+    sprintf(dump_name, "./%s_cpu_in.txt", this->layer_param_.name().c_str());
+    fp = fopen(dump_name, "ab+");
+
+    for (int n = 0; n < bottom[0]->num(); n++) {
+      for (int c = 0; c < bottom[0]->channels(); c++) {
+        for (int h = 0; h < this->blobs_[0]->height(); h++) {
+          for (int w = 0; w < this->blobs_[0]->width(); w++) {
+            fprintf(fp, "%f, ", bottom[0]->data_at(n, c, h, w));
           }
         }
       }
     }
    fprintf(fp, "\n");
+   if (isnan(bottom[0]->data_at(0, 0, 0, 0)) || bottom[0]->data_at(0, 0, 0, 0) > 1000 || bottom[0]->data_at(0, 0, 0, 0) < -1000) {
+     LOG(ERROR) << "bottom abnormal";
+     exit(-1);
+   }
+   fclose(fp);
+   fp = NULL;
+
+    sprintf(dump_name, "./%s_cpu_out.txt", this->layer_param_.name().c_str());
+    fp = fopen(dump_name, "ab+");
+    for (int n = 0; n < top[0]->num(); n++) {
+      for (int c = 0; c < 1; c++) {
+        for (int h = 0; h < 1; h++) {
+          for (int w = 0; w < 1; w++) {
+            fprintf(fp, "%f, ", top[0]->data_at(n, c, h, w));
+          }
+        }
+      }
+    }
+   fprintf(fp, "\n");
+   if (isnan(top[0]->data_at(0, 0, 0, 0)) || top[0]->data_at(0, 0, 0, 0) > 1000 || top[0]->data_at(0, 0, 0, 0) < -1000) {
+     LOG(ERROR) << "top abnormal";
+     exit(-1);
+   }
    fclose(fp);
    fp = NULL;
 #endif
 
-#if 0
+#if 1
    // print weights
-   fp = fopen("./rpn_conv_cpu_weights.txt", "ab+");
-   for (int n = 0; n < 100; n++) {
-      fprintf(fp, "%.2f, ", this->blobs_[0]->cpu_data()[n]);
+   sprintf(dump_name, "./%s_cpu_weights.txt", this->layer_param_.name().c_str());
+   fp = fopen(dump_name, "ab+");
+   // LOG(ERROR) << "[" << this->blobs_[0]->num() << ", " << this->blobs_[0]->channels() << ", " << this->blobs_[0]->height() << ", " << this->blobs_[0]->width() << "]";
+   for (int n = 0; n < 1; n++) {
+     for (int c = 0; c < this->blobs_[0]->channels(); c++) {
+       for (int h = 0; h < this->blobs_[0]->height(); h++) {
+         for (int w = 0; w < this->blobs_[0]->width(); w++) {
+            fprintf(fp, "%f, ", this->blobs_[0]->data_at(n, c, h, w));
+         }
+       }
+     }
    }
    fprintf(fp, "\n");
    fclose(fp);
    fp = NULL;
+
+   if (this->bias_term_) {
+     sprintf(dump_name, "./%s_cpu_biases.txt", this->layer_param_.name().c_str());
+     fp = fopen(dump_name, "ab+");
+     for (int n = 0; n < this->blobs_[1]->count(); n++) {
+        fprintf(fp, "%f, ", this->blobs_[1]->cpu_data()[n]);
+     }
+     fprintf(fp, "\n");
+     fclose(fp);
+     fp = NULL;
+   }
 #endif
-   cnt++;
   }
 #endif
-
   // LOG(ERROR) << "forward total takes: " << timer.MicroSeconds() / 1000. << " ms";
 }
 
