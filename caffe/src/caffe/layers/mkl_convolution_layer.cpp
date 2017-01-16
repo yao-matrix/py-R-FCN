@@ -488,6 +488,7 @@ void MKLConvolutionLayer<Dtype>::Forward_cpu(
   if (this->layer_param_.name().compare("rpn_conv/3x3")) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;
+    char dump_name[256] = {0};
 #if 1
    // print weights
    sprintf(dump_name, "./%s_mkl_weights.txt", this->layer_param_.name().c_str());
@@ -519,7 +520,6 @@ void MKLConvolutionLayer<Dtype>::Forward_cpu(
 #endif
 
 #if 1
-    char dump_name[256] = {0};
     sprintf(dump_name, "./%s_mkl_in.txt", this->layer_param_.name().c_str());
     fp = fopen(dump_name, "ab+");
 
