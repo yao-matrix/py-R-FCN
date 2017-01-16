@@ -489,7 +489,7 @@ void MKLBatchNormLayer<Dtype>::Backward_cpu(
    // print mean
    sprintf(dump_name, "./%s_mkl_variance_bwd.txt", this->layer_param_.name().c_str());
    fp = fopen(dump_name, "ab+");
-   for (int n = 0; n < varaince_.count(); n++) {
+   for (int n = 0; n < variance_.count(); n++) {
       fprintf(fp, "%f, ", variance_.cpu_data()[n]);
    }
    fprintf(fp, "\n");
