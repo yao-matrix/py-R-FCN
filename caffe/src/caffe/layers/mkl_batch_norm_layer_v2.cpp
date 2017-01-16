@@ -162,7 +162,7 @@ void MKLBatchNormLayer<Dtype>::Init(const vector<Blob<Dtype>*>& bottom,
   // Initialize mean, variance and moving average fraction
   if (this->blobs_.size() > 2) {
     mean_.Reshape(scaleshift_shape);
-	variance_.Reshape(scaleshift_shape);
+    variance_.Reshape(scaleshift_shape);
     caffe_set(mean_.count(), Dtype(0), mean_.mutable_cpu_data());
     caffe_set(variance_.count(), Dtype(0), variance_.mutable_cpu_data());
     this->blobs_[2].reset(new Blob<Dtype>(scaleshift_shape));
@@ -474,7 +474,33 @@ void MKLBatchNormLayer<Dtype>::Backward_cpu(
 #endif
 
 #if 1
-   // print top diff
+   // print mean
+   sprintf(dump_name, "./%s_mkl_mean_bwd.txt", this->layer_param_.name().c_str());
+   fp = fopen(dump_name, "ab+");
+   for (int n = 0; n < mean_.count(); n++) {
+      fprintf(fp, "%f, ", mean_.cpu_data()[n]);
+   }
+   fprintf(fp, "\n");
+   fclose(fp);
+   fp = NULL;
+#endif
+
+#if 1
+   // print mean
+   sprintf(dump_name, "./%s_mkl_variance_bwd.txt", this->layer_param_.name().c_str());
+   fp = fopen(dump_name, "ab+");
+   for (int n = 0; n < varaince_.count(); n++) {
+      fprintf(fp, "%f, ", variance_.cpu_data()[n]);
+   }
+   fprintf(fp, "\n");
+   fclose(fp);
+   fp = NULL;
+#endif
+
+
+
+#if 1
+   // print scaleshift data
    sprintf(dump_name, "./%s_mkl_scaleshift_bwd.txt", this->layer_param_.name().c_str());
    fp = fopen(dump_name, "ab+");
    for (int n = 0; n < channels_ * 2; n++) {
@@ -486,7 +512,7 @@ void MKLBatchNormLayer<Dtype>::Backward_cpu(
 #endif
 
 #if 1
-   // print top diff
+   // print scaleshift diff
    sprintf(dump_name, "./%s_mkl_scaleshift_diff.txt", this->layer_param_.name().c_str());
    fp = fopen(dump_name, "ab+");
    for (int n = 0; n < channels_ * 2; n++) {
