@@ -345,6 +345,45 @@ void MKLBatchNormLayer<Dtype>::Forward_cpu(
 
   e = dnnExecute<Dtype>(batchNormFwd, BatchNorm_res);
   CHECK_EQ(e, E_SUCCESS);
+
+#if 1
+  if (1) {
+    LOG(ERROR) << this->layer_param_.name();
+    FILE *fp = NULL;
+    char dump_name[256] = {0};
+
+#if 1
+   // print top diff
+   sprintf(dump_name, "./%s_mkl_scaleshift.txt", this->layer_param_.name().c_str());
+   fp = fopen(dump_name, "ab+");
+   for (int n = 0; n < channels_ * 2; n++) {
+      fprintf(fp, "%f, ", scaleShift_buffer_[n]);
+   }
+   fprintf(fp, "\n");
+   fclose(fp);
+   fp = NULL;
+#endif
+
+#if 1
+   // print bottom
+   sprintf(dump_name, "./%s_mkl_bottom.txt", this->layer_param_.name().c_str());
+   fp = fopen(dump_name, "ab+");
+   for (int n = 0; n < 1; n++) {
+     for (int c = 0; c < 1; c++) {
+       for (int h = 0; h < 1; h++) {
+         for (int w = 0; w < 1; w++) {
+            fprintf(fp, "%f, ", bottom[0]->data_at(n, c, h, w));
+         }
+       }
+     }
+   }
+   fprintf(fp, "\n");
+   fclose(fp);
+   fp = NULL;
+#endif
+  }
+#endif
+
 }
 
 template <typename Dtype>
@@ -414,6 +453,31 @@ void MKLBatchNormLayer<Dtype>::Backward_cpu(
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;
     char dump_name[256] = {0};
+
+#if 1
+   // print top diff
+   sprintf(dump_name, "./%s_mkl_scaleshift_bwd.txt", this->layer_param_.name().c_str());
+   fp = fopen(dump_name, "ab+");
+   for (int n = 0; n < channels_ * 2; n++) {
+      fprintf(fp, "%f, ", scaleShift_buffer_[n]);
+   }
+   fprintf(fp, "\n");
+   fclose(fp);
+   fp = NULL;
+#endif
+
+#if 1
+   // print top diff
+   sprintf(dump_name, "./%s_mkl_scaleshift_diff.txt", this->layer_param_.name().c_str());
+   fp = fopen(dump_name, "ab+");
+   for (int n = 0; n < channels_ * 2; n++) {
+      fprintf(fp, "%f, ", scaleShift_diff_[n]);
+   }
+   fprintf(fp, "\n");
+   fclose(fp);
+   fp = NULL;
+#endif
+
 #if 1
    // print top diff
    sprintf(dump_name, "./%s_mkl_top_diff.txt", this->layer_param_.name().c_str());
@@ -433,7 +497,7 @@ void MKLBatchNormLayer<Dtype>::Backward_cpu(
 #endif
 
 #if 1
-   // print top diff
+   // print bottom diff
    sprintf(dump_name, "./%s_mkl_bottom_diff.txt", this->layer_param_.name().c_str());
    fp = fopen(dump_name, "ab+");
    for (int n = 0; n < 1; n++) {
