@@ -94,6 +94,36 @@ void ConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;
 #if 1
+   // print weights
+   sprintf(dump_name, "./%s_cpu_weights.txt", this->layer_param_.name().c_str());
+   fp = fopen(dump_name, "ab+");
+   // LOG(ERROR) << "[" << this->blobs_[0]->num() << ", " << this->blobs_[0]->channels() << ", " << this->blobs_[0]->height() << ", " << this->blobs_[0]->width() << "]";
+   for (int n = 0; n < 1; n++) {
+     for (int c = 0; c < this->blobs_[0]->channels(); c++) {
+       for (int h = 0; h < this->blobs_[0]->height(); h++) {
+         for (int w = 0; w < this->blobs_[0]->width(); w++) {
+            fprintf(fp, "%f, ", this->blobs_[0]->data_at(n, c, h, w));
+         }
+       }
+     }
+   }
+   fprintf(fp, "\n");
+   fclose(fp);
+   fp = NULL;
+
+   if (this->bias_term_) {
+     sprintf(dump_name, "./%s_cpu_biases.txt", this->layer_param_.name().c_str());
+     fp = fopen(dump_name, "ab+");
+     for (int n = 0; n < this->blobs_[1]->count(); n++) {
+        fprintf(fp, "%f, ", this->blobs_[1]->cpu_data()[n]);
+     }
+     fprintf(fp, "\n");
+     fclose(fp);
+     fp = NULL;
+   }
+#endif
+
+#if 1
     char dump_name[256] = {0};
     sprintf(dump_name, "./%s_cpu_in.txt", this->layer_param_.name().c_str());
     fp = fopen(dump_name, "ab+");
@@ -133,36 +163,6 @@ void ConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
    }
    fclose(fp);
    fp = NULL;
-#endif
-
-#if 1
-   // print weights
-   sprintf(dump_name, "./%s_cpu_weights.txt", this->layer_param_.name().c_str());
-   fp = fopen(dump_name, "ab+");
-   // LOG(ERROR) << "[" << this->blobs_[0]->num() << ", " << this->blobs_[0]->channels() << ", " << this->blobs_[0]->height() << ", " << this->blobs_[0]->width() << "]";
-   for (int n = 0; n < 1; n++) {
-     for (int c = 0; c < this->blobs_[0]->channels(); c++) {
-       for (int h = 0; h < this->blobs_[0]->height(); h++) {
-         for (int w = 0; w < this->blobs_[0]->width(); w++) {
-            fprintf(fp, "%f, ", this->blobs_[0]->data_at(n, c, h, w));
-         }
-       }
-     }
-   }
-   fprintf(fp, "\n");
-   fclose(fp);
-   fp = NULL;
-
-   if (this->bias_term_) {
-     sprintf(dump_name, "./%s_cpu_biases.txt", this->layer_param_.name().c_str());
-     fp = fopen(dump_name, "ab+");
-     for (int n = 0; n < this->blobs_[1]->count(); n++) {
-        fprintf(fp, "%f, ", this->blobs_[1]->cpu_data()[n]);
-     }
-     fprintf(fp, "\n");
-     fclose(fp);
-     fp = NULL;
-   }
 #endif
   }
 #endif
