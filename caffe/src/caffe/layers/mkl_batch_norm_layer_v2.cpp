@@ -287,7 +287,9 @@ void MKLBatchNormLayer<Dtype>::Forward_cpu(
       if (!use_weight_bias_) {
          for (int i = 0; i < channels_; i++) {
             scaleShift_buffer_[i] = 1.0;
+            scaleShift_diff_[i] = 0;
             scaleShift_buffer_[channels_ + i] = 0;
+            scaleShift_diff_[channels_ + i] = 0;
          }
       }
 
@@ -362,9 +364,14 @@ void MKLBatchNormLayer<Dtype>::Backward_cpu(
       bottom_data =
             reinterpret_cast<void *>(
                         const_cast<Dtype*>(bottom[0]->cpu_data()));
-	} else {
-		// LOG(ERROR) << "use prv bottom data";
-	}
+    } else {
+	// LOG(ERROR) << "use prv bottom data";
+      }
+  }
+
+  for (int i = 0; i < channels_; i++) {
+    scaleShift_diff_[i] = 0;
+    scaleShift_diff_[channels_ + i] = 0;
   }
 
   dnnError_t e;
@@ -382,7 +389,7 @@ void MKLBatchNormLayer<Dtype>::Backward_cpu(
     bottom[0]->set_prv_diff_descriptor(bwd_bottom_diff);
     BatchNorm_res[dnnResourceDiffSrc] = bottom[0]->mutable_prv_diff();
   } else {
-	// LOG(ERROR) << this->layer_param_.name() << " directly use cpu diff";
+    // LOG(ERROR) << this->layer_param_.name() << " directly use cpu diff";
     BatchNorm_res[dnnResourceDiffSrc] = reinterpret_cast<void *>(bottom[0]->mutable_cpu_diff());
   }
 
@@ -398,10 +405,36 @@ void MKLBatchNormLayer<Dtype>::Backward_cpu(
       diff_scale[i] =  scaleShift_diff_[i];
       diff_shift[i] =  0;
       if (bias_term_) {
-         diff_shift[i] =  scaleShift_diff_[channels_ + i];
+         diff_shift[i] = scaleShift_diff_[channels_ + i];
       }
     }
   }
+#if 1
+  if (this->layer_param_.name().compare("rpn_conv/3x3")) {
+    LOG(ERROR) << this->layer_param_.name();
+    FILE *fp = NULL;
+    char dump_name[256] = {0};
+#if 1
+   // print top diff
+   sprintf(dump_name, "./%s_mkl_top_diff.txt", this->layer_param_.name().c_str());
+   fp = fopen(dump_name, "ab+");
+   for (int n = 0; n < 1; n++) {
+     for (int c = 0; c < 1; c++) {
+       for (int h = 0; h < 1; h++) {
+         for (int w = 0; w < 1; w++) {
+            fprintf(fp, "%f, ", top[0]->diff_at(n, c, h, w));
+         }
+       }
+     }
+   }
+   fprintf(fp, "\n");
+   fclose(fp);
+   fp = NULL;
+#endif
+
+  }
+#endif
+
 }
 
 
