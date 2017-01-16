@@ -319,15 +319,14 @@ void MKLReLULayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     CHECK_EQ(e, E_SUCCESS);
   }
 
-#if 1
+#if 0
   if (1) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;
     char dump_name[256] = {0};
-
+    std::string layer_name = boost::replace_all_copy(this->layer_param().name(), "/", "-");
 #if 1
    // print top diff
-   std::string layer_name = boost::replace_all_copy(this->layer_param().name(), "/", "-");
    sprintf(dump_name, "./%s_mkl_top_diff.txt", layer_name.c_str());
    fp = fopen(dump_name, "ab+");
    for (int n = 0; n < 1; n++) {

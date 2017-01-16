@@ -297,7 +297,7 @@ void MKLBatchNormLayer<Dtype>::Forward_cpu(
         // use the stored mean/variance estimates.
         const Dtype scale_factor = this->blobs_[4]->cpu_data()[0] == 0 ?
           0 : 1 / this->blobs_[4]->cpu_data()[0];
-        LOG(ERROR) << "scale_factor: " << scale_factor << ", mean count: " << mean_.count();
+        // LOG(ERROR) << "scale_factor: " << scale_factor << ", mean count: " << mean_.count();
         caffe_cpu_scale(mean_.count(), scale_factor,
           this->blobs_[2]->cpu_data(), mean_.mutable_cpu_data());
         caffe_cpu_scale(variance_.count(), scale_factor,
@@ -346,7 +346,7 @@ void MKLBatchNormLayer<Dtype>::Forward_cpu(
   e = dnnExecute<Dtype>(batchNormFwd, BatchNorm_res);
   CHECK_EQ(e, E_SUCCESS);
 
-#if 1
+#if 0
   if (1) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;
@@ -448,7 +448,8 @@ void MKLBatchNormLayer<Dtype>::Backward_cpu(
       }
     }
   }
-#if 1
+
+#if 0
   if (1) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;

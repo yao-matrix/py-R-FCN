@@ -262,7 +262,7 @@ void MKLEltwiseLayer<Dtype>::Forward_cpu(
     LOG(FATAL) << "Unknown elementwise operation.";
   }
 
-#if 1
+#if 0
   if (1) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;
@@ -271,6 +271,8 @@ void MKLEltwiseLayer<Dtype>::Forward_cpu(
 #if 1
     sprintf(dump_name, "./%s_mkl_bottom.txt", this->layer_param_.name().c_str());
     fp = fopen(dump_name, "ab+");
+
+    LOG(ERROR) << "bottom num: " << num_bottoms;
 
     for (int n = 0; n < bottom[0]->num(); n++) {
       for (int c = 0; c < bottom[0]->channels(); c++) {
@@ -319,7 +321,21 @@ template <typename Dtype>
 void MKLEltwiseLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom) {
 
-  bool is_top_diff_prv = top[0]->prv_diff() == NULL ? false : true;
+  const Dtype* top_diff = top[0]->prv_diff();
+  int count = 0;
+  bool is_top_diff_prv = false;
+
+  // If there is no diff in prv layout
+  // then we are given cpu layout
+  // and we will produce bottom at cpu layout as well
+  if (top_diff == NULL) {
+    top_diff = top[0]->cpu_diff();
+    count = top[0]->count();
+  } else {
+    count = top[0]->prv_diff_count();
+    is_top_diff_prv = true;
+  }
+  Dtype* bottom_diff = NULL;
 
   for (int i = 0; i < bottom.size(); ++i) {
     if (propagate_down[i]) {
@@ -327,7 +343,7 @@ void MKLEltwiseLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
       case EltwiseParameter_EltwiseOp_SUM:
         CHECK_EQ(coeffs_[i], Dtype(1)) << "Not supported yet";
         if (is_top_diff_prv == false) {
-          bottom[i]->set_cpu_diff(top[0]->mutable_cpu_diff());
+          bottom_diff = bottom[i]->mutable_cpu_diff();
         } else {
           if (!bwd_bottom_diff[i]->layout_int) {
             bwd_bottom_diff[i]->create_internal_layout(sumPrimitive,
@@ -335,8 +351,10 @@ void MKLEltwiseLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
           }
           CHECK_EQ(true, bwd_bottom_diff[i]->layout_compare(
                   top[0]->get_prv_diff_descriptor()));
-          bottom[i]->set_prv_diff_descriptor(top[0]->get_prv_diff_descriptor(), true);
+          bottom[i]->set_prv_diff_descriptor(bwd_bottom_diff[i]);
+          bottom_diff = bottom[i]->mutable_prv_diff();
         }
+        caffe_copy(count, top_diff, bottom_diff);
         break;
       case EltwiseParameter_EltwiseOp_MAX:
       case EltwiseParameter_EltwiseOp_PROD:
@@ -347,7 +365,7 @@ void MKLEltwiseLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     }
   }
 
-#if 1
+#if 0
   if (1) {
    char dump_name[256] = {0};
    FILE *fp = NULL;
@@ -375,6 +393,8 @@ void MKLEltwiseLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
 #endif
 
 #if 1
+   LOG(ERROR) << "bottom num: " << num_bottoms;
+   LOG(ERROR) << "bottom 0: " << bottom[1]->diff_at(0,0,0,0);
    // print bottom diff
    sprintf(dump_name, "./%s_mkl_bottom_diff.txt", this->layer_param_.name().c_str());
    fp = fopen(dump_name, "ab+");
@@ -390,6 +410,7 @@ void MKLEltwiseLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
        }
      }
    }
+   LOG(ERROR) << "LALALA";
    fprintf(fp, "\n");
    fclose(fp);
    fp = NULL;

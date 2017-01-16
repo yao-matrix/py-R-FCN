@@ -185,7 +185,7 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
 	// LOG(ERROR) << "layer: " << layer_param.name() << " setup start";
     if (param.engine() != "") {
 	  // XXX: Matrix: force some convolution layers to CAFFE engine here to WR performance issue
-	  if (
+	  if (0
           // !layer_param.name().compare("conv1") ||
           // !layer_param.name().compare("rpn_cls_score") ||
           // !layer_param.name().compare("rpn_bbox_pred") ||
@@ -196,7 +196,7 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
           // !layer_param.name().compare("res3a_branch2a") ||
           // !layer_param.name().compare("rpn_bbox_pred")
           // !layer_param.type().compare("BatchNorm")
-          !layer_param.type().compare("Convolution")
+          // !layer_param.type().compare("Convolution")
           // !layer_param.type().compare("Eltwise")
           // !layer_param.type().compare("Pooling")
          ) {

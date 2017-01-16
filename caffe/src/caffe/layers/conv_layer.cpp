@@ -89,14 +89,15 @@ void ConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   }
 
   // dump conv output
-#if 1
-  if (this->layer_param_.name().compare("rpn_conv/3x3")) {
+#if 0
+  if (1) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;
     char dump_name[256] = {0};
+    std::string layer_name = boost::replace_all_copy(this->layer_param().name(), "/", "-");
 #if 1
    // print weights
-   sprintf(dump_name, "./%s_cpu_weights.txt", this->layer_param_.name().c_str());
+   sprintf(dump_name, "./%s_cpu_weights.txt", layer_name.c_str());
    fp = fopen(dump_name, "ab+");
    // LOG(ERROR) << "[" << this->blobs_[0]->num() << ", " << this->blobs_[0]->channels() << ", " << this->blobs_[0]->height() << ", " << this->blobs_[0]->width() << "]";
    for (int n = 0; n < 1; n++) {
@@ -113,7 +114,7 @@ void ConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
    fp = NULL;
 
    if (this->bias_term_) {
-     sprintf(dump_name, "./%s_cpu_biases.txt", this->layer_param_.name().c_str());
+     sprintf(dump_name, "./%s_cpu_biases.txt", layer_name.c_str());
      fp = fopen(dump_name, "ab+");
      for (int n = 0; n < this->blobs_[1]->count(); n++) {
         fprintf(fp, "%f, ", this->blobs_[1]->cpu_data()[n]);
@@ -125,7 +126,7 @@ void ConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 #endif
 
 #if 1
-    sprintf(dump_name, "./%s_cpu_bottom.txt", this->layer_param_.name().c_str());
+    sprintf(dump_name, "./%s_cpu_bottom.txt", layer_name.c_str());
     fp = fopen(dump_name, "ab+");
 
     for (int n = 0; n < bottom[0]->num(); n++) {
@@ -145,7 +146,7 @@ void ConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
    fclose(fp);
    fp = NULL;
 
-    sprintf(dump_name, "./%s_cpu_top.txt", this->layer_param_.name().c_str());
+    sprintf(dump_name, "./%s_cpu_top.txt", layer_name.c_str());
     fp = fopen(dump_name, "ab+");
     for (int n = 0; n < top[0]->num(); n++) {
       for (int c = 0; c < 1; c++) {
@@ -224,14 +225,15 @@ void ConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     }
   }
 
-#if 1
-  if (this->layer_param_.name().compare("rpn_conv/3x3")) {
+#if 0
+  if (1) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;
     char dump_name[256] = {0};
+    std::string layer_name = boost::replace_all_copy(this->layer_param().name(), "/", "-");
 #if 1
    // print weights
-   sprintf(dump_name, "./%s_cpu_weights_diff.txt", this->layer_param_.name().c_str());
+   sprintf(dump_name, "./%s_cpu_weights_diff.txt", layer_name.c_str());
    fp = fopen(dump_name, "ab+");
    // LOG(ERROR) << "[" << this->blobs_[0]->num() << ", " << this->blobs_[0]->channels() << ", " << this->blobs_[0]->height() << ", " << this->blobs_[0]->width() << "]";
    for (int n = 0; n < 1; n++) {
@@ -254,7 +256,7 @@ void ConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
 
 #if 1
    // print top diff
-   sprintf(dump_name, "./%s_cpu_top_diff.txt", this->layer_param_.name().c_str());
+   sprintf(dump_name, "./%s_cpu_top_diff.txt", layer_name.c_str());
    fp = fopen(dump_name, "ab+");
    for (int n = 0; n < 1; n++) {
      for (int c = 0; c < 1; c++) {
@@ -276,7 +278,7 @@ void ConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
 
 #if 1
    // print bottom diff
-   sprintf(dump_name, "./%s_cpu_bottom_diff.txt", this->layer_param_.name().c_str());
+   sprintf(dump_name, "./%s_cpu_bottom_diff.txt", layer_name.c_str());
    fp = fopen(dump_name, "ab+");
    for (int n = 0; n < 1; n++) {
      for (int c = 0; c < 1; c++) {
