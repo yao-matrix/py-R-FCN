@@ -246,7 +246,7 @@ void ConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
    fprintf(fp, "\n");
    fclose(fp);
    fp = NULL;
-   if (this->blobs_[0]->diff_at(0, 0, 0, 0) || this->blobs_[0]->diff_at(0, 0, 0, 0) > 1000 || this->blobs_[0]->diff_at(0, 0, 0, 0) < -1000) {
+   if (isnan(this->blobs_[0]->diff_at(0, 0, 0, 0)) || this->blobs_[0]->diff_at(0, 0, 0, 0) > 1000 || this->blobs_[0]->diff_at(0, 0, 0, 0) < -1000) {
      LOG(ERROR) << "weight diff abnormal";
      exit(-1);
    }

@@ -775,7 +775,7 @@ void MKLConvolutionLayer<Dtype>::Backward_cpu(
    fprintf(fp, "\n");
    fclose(fp);
    fp = NULL;
-   if (this->blobs_[0]->diff_at(0, 0, 0, 0)) || this->blobs_[0]->diff_at(0, 0, 0, 0) > 1000 || this->blobs_[0]->diff_at(0, 0, 0, 0) < -1000) {
+   if (this->blobs_[0]->diff_at(0, 0, 0, 0) || this->blobs_[0]->diff_at(0, 0, 0, 0) > 1000 || this->blobs_[0]->diff_at(0, 0, 0, 0) < -1000) {
      LOG(ERROR) << "weight diff abnormal";
      exit(-1);
    }
@@ -787,7 +787,7 @@ void MKLConvolutionLayer<Dtype>::Backward_cpu(
    fp = fopen(dump_name, "ab+");
    for (int n = 0; n < 1; n++) {
      for (int c = 0; c < 1; c++) {
-       for (int h = 0; h < blobs_[0]->height(); h++) {
+       for (int h = 0; h < this->blobs_[0]->height(); h++) {
          for (int w = 0; w < this->blobs_[0]->width(); w++) {
             fprintf(fp, "%f, ", top[0]->diff_at(n, c, h, w));
          }
