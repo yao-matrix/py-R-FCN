@@ -39,6 +39,7 @@ coverage.xml
 *.mo
 *.pot
 
+Makefile.config
 # Django stuff:
 *.log
 local_settings.py

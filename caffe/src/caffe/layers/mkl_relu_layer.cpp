@@ -327,12 +327,13 @@ void MKLReLULayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
 
 #if 1
    // print top diff
-   sprintf(dump_name, "./%s_mkl_top_diff.txt", this->layer_param_.name().c_str());
+   std::string layer_name = boost::replace_all_copy(this->layer_param().name(), "/", "-");
+   sprintf(dump_name, "./%s_mkl_top_diff.txt", layer_name.c_str());
    fp = fopen(dump_name, "ab+");
    for (int n = 0; n < 1; n++) {
      for (int c = 0; c < 1; c++) {
-       for (int h = 0; h < this->blobs_[0]->height(); h++) {
-         for (int w = 0; w < this->blobs_[0]->width(); w++) {
+       for (int h = 0; h < 1; h++) {
+         for (int w = 0; w < 1; w++) {
             fprintf(fp, "%f, ", top[0]->diff_at(n, c, h, w));
          }
        }
@@ -349,7 +350,7 @@ void MKLReLULayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
 
 #if 1
    // print bottom diff
-   sprintf(dump_name, "./%s_mkl_bottom_diff.txt", this->layer_param_.name().c_str());
+   sprintf(dump_name, "./%s_mkl_bottom_diff.txt", layer_name.c_str());
    fp = fopen(dump_name, "ab+");
    for (int n = 0; n < 1; n++) {
      for (int c = 0; c < 1; c++) {

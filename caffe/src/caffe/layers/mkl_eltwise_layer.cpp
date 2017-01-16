@@ -382,7 +382,10 @@ void MKLEltwiseLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
      for (int c = 0; c < 1; c++) {
        for (int h = 0; h < 1; h++) {
          for (int w = 0; w < 1; w++) {
-            fprintf(fp, "%f, ", bottom[0]->diff_at(n, c, h, w));
+            for (int k = 0; k < num_bottoms; k++) {
+              fprintf(fp, "%f, ", bottom[k]->diff_at(n, c, h, w));
+            }
+            fprintf(fp, ";");
          }
        }
      }

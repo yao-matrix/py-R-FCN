@@ -297,7 +297,7 @@ void MKLBatchNormLayer<Dtype>::Forward_cpu(
         // use the stored mean/variance estimates.
         const Dtype scale_factor = this->blobs_[4]->cpu_data()[0] == 0 ?
           0 : 1 / this->blobs_[4]->cpu_data()[0];
-        // LOG(ERROR) << "scale_factor: " << scale_factor << ", mean count: " << mean_.count();
+        LOG(ERROR) << "scale_factor: " << scale_factor << ", mean count: " << mean_.count();
         caffe_cpu_scale(mean_.count(), scale_factor,
           this->blobs_[2]->cpu_data(), mean_.mutable_cpu_data());
         caffe_cpu_scale(variance_.count(), scale_factor,
@@ -410,7 +410,7 @@ void MKLBatchNormLayer<Dtype>::Backward_cpu(
     }
   }
 #if 1
-  if (this->layer_param_.name().compare("rpn_conv/3x3")) {
+  if (1) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;
     char dump_name[256] = {0};
@@ -432,6 +432,23 @@ void MKLBatchNormLayer<Dtype>::Backward_cpu(
    fp = NULL;
 #endif
 
+#if 1
+   // print top diff
+   sprintf(dump_name, "./%s_mkl_bottom_diff.txt", this->layer_param_.name().c_str());
+   fp = fopen(dump_name, "ab+");
+   for (int n = 0; n < 1; n++) {
+     for (int c = 0; c < 1; c++) {
+       for (int h = 0; h < 1; h++) {
+         for (int w = 0; w < 1; w++) {
+            fprintf(fp, "%f, ", bottom[0]->diff_at(n, c, h, w));
+         }
+       }
+     }
+   }
+   fprintf(fp, "\n");
+   fclose(fp);
+   fp = NULL;
+#endif
   }
 #endif
 
