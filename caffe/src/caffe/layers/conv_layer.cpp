@@ -125,7 +125,7 @@ void ConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 #endif
 
 #if 1
-    sprintf(dump_name, "./%s_cpu_in.txt", this->layer_param_.name().c_str());
+    sprintf(dump_name, "./%s_cpu_bottom.txt", this->layer_param_.name().c_str());
     fp = fopen(dump_name, "ab+");
 
     for (int n = 0; n < bottom[0]->num(); n++) {
@@ -145,7 +145,7 @@ void ConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
    fclose(fp);
    fp = NULL;
 
-    sprintf(dump_name, "./%s_cpu_out.txt", this->layer_param_.name().c_str());
+    sprintf(dump_name, "./%s_cpu_top.txt", this->layer_param_.name().c_str());
     fp = fopen(dump_name, "ab+");
     for (int n = 0; n < top[0]->num(); n++) {
       for (int c = 0; c < 1; c++) {
@@ -212,6 +212,18 @@ void ConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
       }
     }
 
+    if (propagate_down[i]) {
+#ifdef _OPENMP
+      #pragma omp parallel for num_threads(this->num_of_threads_)
+#endif
+        for (int n = 0; n < this->num_; ++n) {
+          // gradient w.r.t. bottom data, if necessary.
+          this->backward_cpu_gemm(top_diff + n * this->top_dim_, weight,
+              bottom_diff + n * this->bottom_dim_);
+        }
+    }
+  }
+
 #if 1
   if (this->layer_param_.name().compare("rpn_conv/3x3")) {
     LOG(ERROR) << this->layer_param_.name();
@@ -234,6 +246,10 @@ void ConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
    fprintf(fp, "\n");
    fclose(fp);
    fp = NULL;
+   if (this->blobs_[0]->diff_at(0, 0, 0, 0) || this->blobs_[0]->diff_at(0, 0, 0, 0) > 1000 || this->blobs_[0]->diff_at(0, 0, 0, 0) < -1000) {
+     LOG(ERROR) << "weight diff abnormal";
+     exit(-1);
+   }
 #endif
 
 #if 1
@@ -242,8 +258,8 @@ void ConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
    fp = fopen(dump_name, "ab+");
    for (int n = 0; n < 1; n++) {
      for (int c = 0; c < 1; c++) {
-       for (int h = 0; h < 1; h++) {
-         for (int w = 0; w < 1; w++) {
+       for (int h = 0; h < this->blobs_[0]->height(); h++) {
+         for (int w = 0; w < this->blobs_[0]->width(); w++) {
             fprintf(fp, "%f, ", top[0]->diff_at(n, c, h, w));
          }
        }
@@ -252,22 +268,36 @@ void ConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
    fprintf(fp, "\n");
    fclose(fp);
    fp = NULL;
+   if (isnan(top[0]->diff_at(0, 0, 0, 0)) || top[0]->diff_at(0, 0, 0, 0) > 1000 || top[0]->diff_at(0, 0, 0, 0) < -1000) {
+     LOG(ERROR) << "top diff abnormal";
+     exit(-1);
+   }
+#endif
+
+#if 1
+   // print bottom diff
+   sprintf(dump_name, "./%s_cpu_bottom_diff.txt", this->layer_param_.name().c_str());
+   fp = fopen(dump_name, "ab+");
+   for (int n = 0; n < 1; n++) {
+     for (int c = 0; c < 1; c++) {
+       for (int h = 0; h < 1; h++) {
+         for (int w = 0; w < 1; w++) {
+            fprintf(fp, "%f, ", bottom[0]->diff_at(n, c, h, w));
+         }
+       }
+     }
+   }
+   fprintf(fp, "\n");
+   fclose(fp);
+   fp = NULL;
+   if (isnan(bottom[0]->diff_at(0, 0, 0, 0)) || bottom[0]->diff_at(0, 0, 0, 0) > 1000 || bottom[0]->diff_at(0, 0, 0, 0) < -1000) {
+     LOG(ERROR) << "bottom diff abnormal";
+     exit(-1);
+   }
 #endif
 
   }
 #endif
-
-    if (propagate_down[i]) {
-#ifdef _OPENMP
-      #pragma omp parallel for num_threads(this->num_of_threads_)
-#endif
-        for (int n = 0; n < this->num_; ++n) {
-          // gradient w.r.t. bottom data, if necessary.
-          this->backward_cpu_gemm(top_diff + n * this->top_dim_, weight,
-              bottom_diff + n * this->bottom_dim_);
-        }
-    }
-  }
 
 #ifdef USE_MLSL
   this->on_delinp_ready(propagate_down);

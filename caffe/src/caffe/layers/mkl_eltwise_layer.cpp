@@ -262,66 +262,51 @@ void MKLEltwiseLayer<Dtype>::Forward_cpu(
     LOG(FATAL) << "Unknown elementwise operation.";
   }
 
-#if 0
-  if (1 /*!this->layer_param_.name().compare("res4b3")*/) {
+#if 1
+  if (1) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;
+    char dump_name[256] = {0};
+
 #if 1
-    char dump_name[256] = {};
-    sprintf(dump_name, "./%s_mkl_in.txt", this->layer_param_.name().c_str());
+    sprintf(dump_name, "./%s_mkl_bottom.txt", this->layer_param_.name().c_str());
     fp = fopen(dump_name, "ab+");
-    const Dtype* bottom_data = bottom[0]->cpu_data();
-    int i = 0;
+
     for (int n = 0; n < bottom[0]->num(); n++) {
-      for (int c = 0; c < 1; c++) {
-        for (int h = 0; h < bottom[0]->height(); h++) {
-          for (int w = 0; w < bottom[0]->width(); w++) {
-            fprintf(fp, "%.2f, ", bottom_data[i]);
-            i++;
+      for (int c = 0; c < bottom[0]->channels(); c++) {
+        for (int h = 0; h < this->blobs_[0]->height(); h++) {
+          for (int w = 0; w < this->blobs_[0]->width(); w++) {
+            fprintf(fp, "%f, ", bottom[0]->data_at(n, c, h, w));
           }
         }
       }
     }
-    fprintf(fp, "\n");
-    fclose(fp);
-    fp = NULL;
-    if (isnan(bottom_data[0])) {
-       LOG(ERROR) << "Elt NAN";
-       exit(-1);
-    }
+   fprintf(fp, "\n");
+   if (isnan(bottom[0]->data_at(0, 0, 0, 0)) || bottom[0]->data_at(0, 0, 0, 0) > 1000 || bottom[0]->data_at(0, 0, 0, 0) < -1000) {
+     LOG(ERROR) << "bottom abnormal";
+     exit(-1);
+   }
+   fclose(fp);
+   fp = NULL;
 
-    sprintf(dump_name, "./%s_mkl_out.txt", this->layer_param_.name().c_str());
+    sprintf(dump_name, "./%s_mkl_top.txt", this->layer_param_.name().c_str());
     fp = fopen(dump_name, "ab+");
-    const Dtype* top_data = top[0]->cpu_data();
     for (int n = 0; n < top[0]->num(); n++) {
       for (int c = 0; c < 1; c++) {
-        for (int h = 0; h < top[0]->height(); h++) {
-          for (int w = 0; w < top[0]->width(); w++) {
-            fprintf(fp, "%.2f, ", top_data[i]);
-            i++;
+        for (int h = 0; h < 1; h++) {
+          for (int w = 0; w < 1; w++) {
+            fprintf(fp, "%f, ", top[0]->data_at(n, c, h, w));
           }
         }
       }
     }
-    fprintf(fp, "\n");
-    fclose(fp);
-    fp = NULL;
-    if (isnan(top_data[0])) {
-       LOG(ERROR) << "Elt NAN";
-       exit(-1);
-    }
-#endif
-
-#if 0
-    // print weights
-    sprintf(dump_name, "./%s_mkl_weights.txt", this->layer_param_.name().c_str());
-    fp = fopen(dump_name, "ab+");
-    for (int n = 0; n < 100; n++) {
-      fprintf(fp, "%.2f, ", this->blobs_[0]->cpu_data()[n]);
-    }
-    fprintf(fp, "\n");
-    fclose(fp);
-    fp = NULL;
+   fprintf(fp, "\n");
+   if (isnan(top[0]->data_at(0, 0, 0, 0)) || top[0]->data_at(0, 0, 0, 0) > 1000 || top[0]->data_at(0, 0, 0, 0) < -1000) {
+     LOG(ERROR) << "top abnormal";
+     exit(-1);
+   }
+   fclose(fp);
+   fp = NULL;
 #endif
   }
 #endif
@@ -358,6 +343,55 @@ void MKLEltwiseLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
       }
     }
   }
+
+#if 1
+
+#if 1
+   // print top diff
+   sprintf(dump_name, "./%s_mkl_top_diff.txt", this->layer_param_.name().c_str());
+   fp = fopen(dump_name, "ab+");
+   for (int n = 0; n < 1; n++) {
+     for (int c = 0; c < 1; c++) {
+       for (int h = 0; h < blobs_[0]->height(); h++) {
+         for (int w = 0; w < this->blobs_[0]->width(); w++) {
+            fprintf(fp, "%f, ", top[0]->diff_at(n, c, h, w));
+         }
+       }
+     }
+   }
+   fprintf(fp, "\n");
+   fclose(fp);
+   fp = NULL;
+   if (isnan(top[0]->diff_at(0, 0, 0, 0)) || top[0]->diff_at(0, 0, 0, 0) > 1000 || top[0]->diff_at(0, 0, 0, 0) < -1000) {
+     LOG(ERROR) << "top diff abnormal";
+     exit(-1);
+   }
+#endif
+
+#if 1
+   // print bottom diff
+   sprintf(dump_name, "./%s_mkl_bottom_diff.txt", this->layer_param_.name().c_str());
+   fp = fopen(dump_name, "ab+");
+   for (int n = 0; n < 1; n++) {
+     for (int c = 0; c < 1; c++) {
+       for (int h = 0; h < 1; h++) {
+         for (int w = 0; w < 1; w++) {
+            fprintf(fp, "%f, ", bottom[0]->diff_at(n, c, h, w));
+         }
+       }
+     }
+   }
+   fprintf(fp, "\n");
+   fclose(fp);
+   fp = NULL;
+   if (isnan(bottom[0]->diff_at(0, 0, 0, 0)) || bottom[0]->diff_at(0, 0, 0, 0) > 1000 || bottom[0]->diff_at(0, 0, 0, 0) < -1000) {
+     LOG(ERROR) << "bottom diff abnormal";
+     exit(-1);
+   }
+#endif
+
+  }
+#endif
 }
 
 #ifdef CPU_ONLY

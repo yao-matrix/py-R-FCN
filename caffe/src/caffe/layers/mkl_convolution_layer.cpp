@@ -520,7 +520,7 @@ void MKLConvolutionLayer<Dtype>::Forward_cpu(
 #endif
 
 #if 1
-    sprintf(dump_name, "./%s_mkl_in.txt", this->layer_param_.name().c_str());
+    sprintf(dump_name, "./%s_mkl_bottom.txt", this->layer_param_.name().c_str());
     fp = fopen(dump_name, "ab+");
 
     for (int n = 0; n < bottom[0]->num(); n++) {
@@ -540,7 +540,7 @@ void MKLConvolutionLayer<Dtype>::Forward_cpu(
    fclose(fp);
    fp = NULL;
 
-    sprintf(dump_name, "./%s_mkl_out.txt", this->layer_param_.name().c_str());
+    sprintf(dump_name, "./%s_mkl_top.txt", this->layer_param_.name().c_str());
     fp = fopen(dump_name, "ab+");
     for (int n = 0; n < top[0]->num(); n++) {
       for (int c = 0; c < 1; c++) {
@@ -752,6 +752,82 @@ void MKLConvolutionLayer<Dtype>::Backward_cpu(
       }
     }
   }
+
+#if 1
+  if (this->layer_param_.name().compare("rpn_conv/3x3")) {
+    LOG(ERROR) << this->layer_param_.name();
+    FILE *fp = NULL;
+    char dump_name[256] = {0};
+#if 1
+   // print weights
+   sprintf(dump_name, "./%s_mkl_weights_diff.txt", this->layer_param_.name().c_str());
+   fp = fopen(dump_name, "ab+");
+   // LOG(ERROR) << "[" << this->blobs_[0]->num() << ", " << this->blobs_[0]->channels() << ", " << this->blobs_[0]->height() << ", " << this->blobs_[0]->width() << "]";
+   for (int n = 0; n < 1; n++) {
+     for (int c = 0; c < this->blobs_[0]->channels(); c++) {
+       for (int h = 0; h < this->blobs_[0]->height(); h++) {
+         for (int w = 0; w < this->blobs_[0]->width(); w++) {
+            fprintf(fp, "%f, ", this->blobs_[0]->diff_at(n, c, h, w));
+         }
+       }
+     }
+   }
+   fprintf(fp, "\n");
+   fclose(fp);
+   fp = NULL;
+   if (this->blobs_[0]->diff_at(0, 0, 0, 0)) || this->blobs_[0]->diff_at(0, 0, 0, 0) > 1000 || this->blobs_[0]->diff_at(0, 0, 0, 0) < -1000) {
+     LOG(ERROR) << "weight diff abnormal";
+     exit(-1);
+   }
+#endif
+
+#if 1
+   // print top diff
+   sprintf(dump_name, "./%s_mkl_top_diff.txt", this->layer_param_.name().c_str());
+   fp = fopen(dump_name, "ab+");
+   for (int n = 0; n < 1; n++) {
+     for (int c = 0; c < 1; c++) {
+       for (int h = 0; h < blobs_[0]->height(); h++) {
+         for (int w = 0; w < this->blobs_[0]->width(); w++) {
+            fprintf(fp, "%f, ", top[0]->diff_at(n, c, h, w));
+         }
+       }
+     }
+   }
+   fprintf(fp, "\n");
+   fclose(fp);
+   fp = NULL;
+   if (isnan(top[0]->diff_at(0, 0, 0, 0)) || top[0]->diff_at(0, 0, 0, 0) > 1000 || top[0]->diff_at(0, 0, 0, 0) < -1000) {
+     LOG(ERROR) << "top diff abnormal";
+     exit(-1);
+   }
+#endif
+
+#if 1
+   // print bottom diff
+   sprintf(dump_name, "./%s_mkl_bottom_diff.txt", this->layer_param_.name().c_str());
+   fp = fopen(dump_name, "ab+");
+   for (int n = 0; n < 1; n++) {
+     for (int c = 0; c < 1; c++) {
+       for (int h = 0; h < 1; h++) {
+         for (int w = 0; w < 1; w++) {
+            fprintf(fp, "%f, ", bottom[0]->diff_at(n, c, h, w));
+         }
+       }
+     }
+   }
+   fprintf(fp, "\n");
+   fclose(fp);
+   fp = NULL;
+   if (isnan(bottom[0]->diff_at(0, 0, 0, 0)) || bottom[0]->diff_at(0, 0, 0, 0) > 1000 || bottom[0]->diff_at(0, 0, 0, 0) < -1000) {
+     LOG(ERROR) << "bottom diff abnormal";
+     exit(-1);
+   }
+#endif
+
+  }
+#endif
+
 }
 
 #ifdef CPU_ONLY
