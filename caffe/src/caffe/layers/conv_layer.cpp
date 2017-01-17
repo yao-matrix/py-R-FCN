@@ -89,7 +89,7 @@ void ConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   }
 
   // dump conv output
-#if 0
+#if 1
   if (1) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;
@@ -225,7 +225,7 @@ void ConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     }
   }
 
-#if 0
+#if 1
   if (1) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;

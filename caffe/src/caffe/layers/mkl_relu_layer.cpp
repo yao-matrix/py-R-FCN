@@ -319,7 +319,7 @@ void MKLReLULayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     CHECK_EQ(e, E_SUCCESS);
   }
 
-#if 0
+#if 1
   if (1) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;

@@ -1365,15 +1365,15 @@ void Net<Dtype>::CopyTrainedLayersFrom(const NetParameter& param) {
               const bool kReshape = false;
 	      if (j < 2) {
                 if (j < consumer_layer.blobs_size()) {
-		    target_blobs[j]->FromProto(consumer_layer.blobs(j), kReshape);
+                    target_blobs[j]->FromProto(consumer_layer.blobs(j), kReshape);
                 }
 	      } else {
                 if ( j - 2 < source_layer.blobs_size()) {
-		    target_blobs[j]->FromProto(source_layer.blobs(j - 2), kReshape);
+                    target_blobs[j]->FromProto(source_layer.blobs(j - 2), kReshape);
                 }
 	      }
-            }
-            continue;
+        }
+        continue;
       }
     }
 #endif
