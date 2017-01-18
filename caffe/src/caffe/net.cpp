@@ -1343,8 +1343,8 @@ void Net<Dtype>::CopyTrainedLayersFrom(const NetParameter& param) {
     vector<shared_ptr<Blob<Dtype> > >& target_blobs = layers_[target_layer_id]->blobs();
 
 #if 1
-    if (source_layer.type().compare("BatchNorm") == 0) {
-      const LayerParameter& target_layer = layers_[target_layer_id]->layer_param();
+    const LayerParameter& target_layer = layers_[target_layer_id]->layer_param();
+    if ((source_layer.type().compare("BatchNorm") == 0) && (target_layer.engine().compare("MKL2017") == 0)) {
       std::vector<const LayerParameter*> consumer_layer_params;
       GetBlobConsumers(consumer_layer_params,
                        source_layer.top(0),
@@ -1354,27 +1354,24 @@ void Net<Dtype>::CopyTrainedLayersFrom(const NetParameter& param) {
                                     consumer_layer_params.size() > 0 ?
                                     *(consumer_layer_params[0]) : source_layer;
 
+      // mean, variance and aggregation weight to 2 ~ 4
+      for (int j = 0; j < source_layer.blobs_size(); j++) {
+          target_blobs[j + 2]->FromProto(source_layer.blobs(j), false);
+      }
+
       // LOG(ERROR) << "source layer type: " << source_layer.type() << " , consumer layer type: " << consumer_layer.type() << ", engine: " << target_layer.engine();
       // Consumer layer of blob produced by BN
       // has to be Scale layer with one Input Blob, merge Scale blobs into BN blobs
       if ((consumer_layer.type().compare("Scale") == 0) &&
            (consumer_layer.bottom_size() == 1) && (target_layer.engine().compare("MKL2017") == 0) ) {
-	    CHECK_EQ(target_blobs.size(), source_layer.blobs_size() + consumer_layer.blobs_size())
+	      CHECK_EQ(target_blobs.size(), source_layer.blobs_size() + consumer_layer.blobs_size())
               << "Incompatible number of blobs for layer " << source_layer_name;
-	    for (int j = 0; j < target_blobs.size(); ++j) {
-              const bool kReshape = false;
-	      if (j < 2) {
-                if (j < consumer_layer.blobs_size()) {
-                    target_blobs[j]->FromProto(consumer_layer.blobs(j), kReshape);
-                }
-	      } else {
-                if ( j - 2 < source_layer.blobs_size()) {
-                    target_blobs[j]->FromProto(source_layer.blobs(j - 2), kReshape);
-                }
+	      for (int j = 0; j < consumer_layer.blobs_size(); ++j) {
+            const bool kReshape = false;
+            target_blobs[j]->FromProto(consumer_layer.blobs(j), kReshape);
 	      }
-        }
-        continue;
       }
+      continue;
     }
 #endif
 

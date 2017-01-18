@@ -61,7 +61,7 @@ void im2col_cpu(const Dtype* data_im, const int channels,
     const int stride_h, const int stride_w,
     const int dilation_h, const int dilation_w,
     Dtype* data_col) {
-#if 0
+#if 1
   const int output_h = (height + 2 * pad_h -
     (dilation_h * (kernel_h - 1) + 1)) / stride_h + 1;
   const int output_w = (width + 2 * pad_w -
@@ -231,7 +231,7 @@ void col2im_cpu(const Dtype* data_col, const int channels,
     const int stride_h, const int stride_w,
     const int dilation_h, const int dilation_w,
     Dtype* data_im) {
-#if 0
+#if 1
   caffe_set(height * width * channels, Dtype(0), data_im);
   const int output_h = (height + 2 * pad_h -
     (dilation_h * (kernel_h - 1) + 1)) / stride_h + 1;
