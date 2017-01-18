@@ -250,7 +250,7 @@ void MKLSplitLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
   e = dnnExecute<Dtype>(sumPrimitive, sum_res);
   PERFORMANCE_MEASUREMENT_END_STATIC("BW_mkl_split");
 
-#if 1
+#if DUMP_LAYER_IO
   if (1) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;

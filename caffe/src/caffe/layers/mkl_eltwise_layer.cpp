@@ -262,7 +262,7 @@ void MKLEltwiseLayer<Dtype>::Forward_cpu(
     LOG(FATAL) << "Unknown elementwise operation.";
   }
 
-#if 1
+#if DUMP_LAYER_IO
   if (1) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;
@@ -272,7 +272,7 @@ void MKLEltwiseLayer<Dtype>::Forward_cpu(
     sprintf(dump_name, "./%s_mkl_bottom.txt", this->layer_param_.name().c_str());
     fp = fopen(dump_name, "ab+");
 
-    LOG(ERROR) << "bottom num: " << num_bottoms;
+    // LOG(ERROR) << "bottom num: " << num_bottoms;
 
     for (int n = 0; n < bottom[0]->num(); n++) {
       for (int c = 0; c < bottom[0]->channels(); c++) {
@@ -365,7 +365,7 @@ void MKLEltwiseLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     }
   }
 
-#if 1
+#if DUMP_LAYER_IO
   if (1) {
    char dump_name[256] = {0};
    FILE *fp = NULL;

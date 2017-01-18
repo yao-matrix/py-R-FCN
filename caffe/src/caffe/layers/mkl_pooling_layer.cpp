@@ -404,7 +404,7 @@ void MKLPoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   status = dnnExecute<Dtype>(poolingFwd, pooling_res);
   PERFORMANCE_MEASUREMENT_END_STATIC("FW_mkl_pooling");
 
-#if 1
+#if DUMP_LAYER_IO
   if (1) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;
@@ -417,8 +417,8 @@ void MKLPoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 
     for (int n = 0; n < bottom[0]->num(); n++) {
       for (int c = 0; c < bottom[0]->channels(); c++) {
-        for (int h = 0; h < this->blobs_[0]->height(); h++) {
-          for (int w = 0; w < this->blobs_[0]->width(); w++) {
+        for (int h = 0; h < 1; h++) {
+          for (int w = 0; w < 1; w++) {
             fprintf(fp, "%f, ", bottom[0]->data_at(n, c, h, w));
           }
         }
@@ -494,7 +494,7 @@ void MKLPoolingLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
   e = dnnExecute<Dtype>(poolingBwd, pooling_res);
   PERFORMANCE_MEASUREMENT_END_STATIC("BW_mkl_pooling");
 
-#if 1
+#if DUMP_LAYER_IO
   if (1) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;

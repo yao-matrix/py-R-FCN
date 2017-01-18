@@ -277,7 +277,7 @@ void MKLReLULayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   e = dnnExecute<Dtype>(reluFwd_, relu_res);
   PERFORMANCE_MEASUREMENT_END_STATIC("FW_mkl_relu");
 
-#if 1
+#if DUMP_LAYER_IO
   if (1) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;
@@ -290,8 +290,8 @@ void MKLReLULayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 
     for (int n = 0; n < bottom[0]->num(); n++) {
       for (int c = 0; c < bottom[0]->channels(); c++) {
-        for (int h = 0; h < this->blobs_[0]->height(); h++) {
-          for (int w = 0; w < this->blobs_[0]->width(); w++) {
+        for (int h = 0; h < 1; h++) {
+          for (int w = 0; w < 1; w++) {
             fprintf(fp, "%f, ", bottom[0]->data_at(n, c, h, w));
           }
         }
@@ -369,7 +369,7 @@ void MKLReLULayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     CHECK_EQ(e, E_SUCCESS);
   }
 
-#if 1
+#if DUMP_LAYER_IO
   if (1) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;

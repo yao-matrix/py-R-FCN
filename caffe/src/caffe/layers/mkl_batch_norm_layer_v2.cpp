@@ -346,7 +346,7 @@ void MKLBatchNormLayer<Dtype>::Forward_cpu(
   e = dnnExecute<Dtype>(batchNormFwd, BatchNorm_res);
   CHECK_EQ(e, E_SUCCESS);
 
-#if 1
+#if DUMP_LAYER_IO
   if (1) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;
@@ -457,7 +457,7 @@ void MKLBatchNormLayer<Dtype>::Backward_cpu(
     }
   }
 
-#if 1
+#if DUMP_LAYER_IO
   if (1) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;

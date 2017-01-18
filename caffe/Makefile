@@ -492,6 +492,10 @@ ifneq ("$(wildcard $(MKLDNN_INCLUDE)/mkldnn.hpp)","")
 	MKLDNN_LDFLAGS+=-L$(MKLDNNROOT)/lib -Wl,-rpath,$(MKLDNNROOT)/lib
 endif
 
+ifeq ($(DUMP_LAYER_IO), 1)
+CXXFLAGS += -DDUMP_LAYER_IO=1
+endif
+
 # BLAS configuration (default = MKL)
 MKL_LDFLAGS=
 MKL_EXTERNAL := 0

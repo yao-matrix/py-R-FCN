@@ -484,7 +484,7 @@ void MKLConvolutionLayer<Dtype>::Forward_cpu(
   CHECK_EQ(status, 0) << "Forward convolution failed with status " << status;
 
   // dump conv output
-#if 1
+#if DUMP_LAYER_IO
   if (1) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;
@@ -754,7 +754,7 @@ void MKLConvolutionLayer<Dtype>::Backward_cpu(
     }
   }
 
-#if 1
+#if DUMP_LAYER_IO
   if (1) {
     LOG(ERROR) << this->layer_param_.name();
     FILE *fp = NULL;

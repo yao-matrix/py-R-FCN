@@ -128,7 +128,7 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
   // Backward compatibility for obsolete compile-time flags
 #ifdef USE_MKL2017_AS_DEFAULT_ENGINE
   if (filtered_param.engine() == "") {
-    filtered_param.set_engine("MKL2017");
+    // filtered_param.set_engine("MKL2017");
   }
 #endif
 
@@ -183,9 +183,9 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
     // Setup layer.
     const LayerParameter& layer_param = param.layer(layer_id);
 	// LOG(ERROR) << "layer: " << layer_param.name() << " setup start";
-    if (param.engine() != "") {
+    if (1) /*(param.engine() != "") */{
 	  // XXX: Matrix: force some convolution layers to CAFFE engine here to WR performance issue
-	  if (0
+	  if (
           // !layer_param.name().compare("conv1") ||
           // !layer_param.name().compare("rpn_cls_score") ||
           // !layer_param.name().compare("rpn_bbox_pred") ||
@@ -195,15 +195,17 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
           // !layer_param.name().compare("res3a_branch1") ||
           // !layer_param.name().compare("res3a_branch2a") ||
           // !layer_param.name().compare("rpn_bbox_pred")
-          // !layer_param.type().compare("BatchNorm")
-          // !layer_param.type().compare("Convolution")
-          // !layer_param.type().compare("Eltwise")
-          // !layer_param.type().compare("Pooling")
+          // layer_param.type().compare("BatchNorm") &&
+          layer_param.type().compare("ReLU") &&
+          layer_param.type().compare("Convolution") &&
+          layer_param.type().compare("Eltwise") &&
+          layer_param.type().compare("Pooling") &&
+          layer_param.type().compare("Split")
          ) {
 	     // LOG(ERROR) << layer_param.name() << " use CAFFE Engine";
 	     param.mutable_layer(layer_id)->set_engine("CAFFE");
 	  } else {
-             param.mutable_layer(layer_id)->set_engine(param.engine());
+         param.mutable_layer(layer_id)->set_engine("MKL2017");
 	  }
 	}
 
@@ -665,6 +667,8 @@ void Net<Dtype>::CompilationRuleOne(const NetParameter& param,
         }
         // LOG(ERROR) << "layer_param size: " << layer_param->param_size();
         // LOG(ERROR) << "param lr: " << layer_param->param(4).lr_mult();
+      } else {
+          LOG(ERROR) << layer_param->name() << " has no Scale layer followed it";
       }
     }
 
