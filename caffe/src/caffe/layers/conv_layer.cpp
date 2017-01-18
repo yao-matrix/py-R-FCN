@@ -139,10 +139,6 @@ void ConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       }
     }
    fprintf(fp, "\n");
-   if (isnan(bottom[0]->data_at(0, 0, 0, 0)) || bottom[0]->data_at(0, 0, 0, 0) > 1000 || bottom[0]->data_at(0, 0, 0, 0) < -1000) {
-     LOG(ERROR) << "bottom abnormal";
-     exit(-1);
-   }
    fclose(fp);
    fp = NULL;
 
@@ -158,13 +154,17 @@ void ConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       }
     }
    fprintf(fp, "\n");
+   fclose(fp);
+   fp = NULL;
+#endif
+   if (isnan(bottom[0]->data_at(0, 0, 0, 0)) || bottom[0]->data_at(0, 0, 0, 0) > 1000 || bottom[0]->data_at(0, 0, 0, 0) < -1000) {
+     LOG(ERROR) << "bottom abnormal";
+     exit(-1);
+   }
    if (isnan(top[0]->data_at(0, 0, 0, 0)) || top[0]->data_at(0, 0, 0, 0) > 1000 || top[0]->data_at(0, 0, 0, 0) < -1000) {
      LOG(ERROR) << "top abnormal";
      exit(-1);
    }
-   fclose(fp);
-   fp = NULL;
-#endif
   }
 #endif
   // LOG(ERROR) << "forward total takes: " << timer.MicroSeconds() / 1000. << " ms";
@@ -248,10 +248,6 @@ void ConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
    fprintf(fp, "\n");
    fclose(fp);
    fp = NULL;
-   if (isnan(this->blobs_[0]->diff_at(0, 0, 0, 0)) || this->blobs_[0]->diff_at(0, 0, 0, 0) > 1000 || this->blobs_[0]->diff_at(0, 0, 0, 0) < -1000) {
-     LOG(ERROR) << "weight diff abnormal";
-     exit(-1);
-   }
 #endif
 
 #if 1
@@ -270,10 +266,6 @@ void ConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
    fprintf(fp, "\n");
    fclose(fp);
    fp = NULL;
-   if (isnan(top[0]->diff_at(0, 0, 0, 0)) || top[0]->diff_at(0, 0, 0, 0) > 1000 || top[0]->diff_at(0, 0, 0, 0) < -1000) {
-     LOG(ERROR) << "top diff abnormal";
-     exit(-1);
-   }
 #endif
 
 #if 1
@@ -292,12 +284,19 @@ void ConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
    fprintf(fp, "\n");
    fclose(fp);
    fp = NULL;
+#endif
+   if (isnan(this->blobs_[0]->diff_at(0, 0, 0, 0)) || this->blobs_[0]->diff_at(0, 0, 0, 0) > 1000 || this->blobs_[0]->diff_at(0, 0, 0, 0) < -1000) {
+     LOG(ERROR) << "weight diff abnormal";
+     exit(-1);
+   }
+   if (isnan(top[0]->diff_at(0, 0, 0, 0)) || top[0]->diff_at(0, 0, 0, 0) > 1000 || top[0]->diff_at(0, 0, 0, 0) < -1000) {
+     LOG(ERROR) << "top diff abnormal";
+     exit(-1);
+   }
    if (isnan(bottom[0]->diff_at(0, 0, 0, 0)) || bottom[0]->diff_at(0, 0, 0, 0) > 1000 || bottom[0]->diff_at(0, 0, 0, 0) < -1000) {
      LOG(ERROR) << "bottom diff abnormal";
      exit(-1);
    }
-#endif
-
   }
 #endif
 

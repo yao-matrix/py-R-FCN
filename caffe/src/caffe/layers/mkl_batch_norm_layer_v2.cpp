@@ -381,6 +381,14 @@ void MKLBatchNormLayer<Dtype>::Forward_cpu(
    fclose(fp);
    fp = NULL;
 #endif
+   if (isnan(bottom[0]->data_at(0, 0, 0, 0)) || bottom[0]->data_at(0, 0, 0, 0) > 1000 || bottom[0]->data_at(0, 0, 0, 0) < -1000) {
+     LOG(ERROR) << "bottom abnormal";
+     exit(-1);
+   }
+   if (isnan(top[0]->data_at(0, 0, 0, 0)) || top[0]->data_at(0, 0, 0, 0) > 1000 || top[0]->data_at(0, 0, 0, 0) < -1000) {
+     LOG(ERROR) << "top abnormal";
+     exit(-1);
+   }
   }
 #endif
 
@@ -487,7 +495,7 @@ void MKLBatchNormLayer<Dtype>::Backward_cpu(
 #endif
 
 #if 1
-   // print mean
+   // print variance
    sprintf(dump_name, "./%s_mkl_variance_bwd.txt", this->layer_param_.name().c_str());
    fp = fopen(dump_name, "ab+");
    for (int n = 0; n < variance_.count(); n++) {
@@ -497,8 +505,6 @@ void MKLBatchNormLayer<Dtype>::Backward_cpu(
    fclose(fp);
    fp = NULL;
 #endif
-
-
 
 #if 1
    // print scaleshift data
