@@ -313,7 +313,7 @@ void MKLBatchNormLayer<Dtype>::Forward_cpu(
         caffe_copy(variance_.count(), variance_.cpu_data(), stdvar_.mutable_cpu_data());
         caffe_add_scalar(stdvar_.count(), eps_, stdvar_.mutable_cpu_data());
         caffe_powx(stdvar_.count(), stdvar_.cpu_data(), Dtype(0.5), stdvar_.mutable_cpu_data());
-        caffe_div(stdvar_.count(), scaleShift_buffer_, stdvar_.cpu_data(), stdvar_.mutable_cpu_data());
+        caffe_div(stdvar_.count(), this->blobs_[0]->cpu_data(), stdvar_.cpu_data(), stdvar_.mutable_cpu_data());
       }
   }
 
@@ -406,7 +406,7 @@ template <typename Dtype>
 void MKLBatchNormLayer<Dtype>::Backward_cpu(
     const vector<Blob<Dtype>*>& top, const vector<bool>& propagate_down,
     const vector<Blob<Dtype>*>& bottom) {
-#if 0
+#ifdef ENABLE_MKL_BN_BW
   void *bottom_data = NULL;
   if (bottom[0] == top[0]) {
     bottom_data = reinterpret_cast<void *>(
@@ -472,6 +472,7 @@ void MKLBatchNormLayer<Dtype>::Backward_cpu(
     const Dtype* coef = stdvar_.cpu_data();
     const int pixels_per_plane = top[0]->width() * top[0]->height();
     const int pixels_per_image = pixels_per_plane * top[0]->channels();
+#pragma omp parallel for
     for (int n = 0; n < top[0]->num(); ++n) {
       const int image_offset = n * pixels_per_image;
       for (int c = 0; c < top[0]->channels(); ++c) {
