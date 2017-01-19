@@ -194,7 +194,7 @@ def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_clas
     # against there being fewer than desired)
     bg_rois_per_this_image = rois_per_image - fg_rois_per_this_image
     bg_rois_per_this_image = min(bg_rois_per_this_image, bg_inds.size)
-    print rois_per_image, fg_rois_per_this_image, bg_rois_per_this_image 
+    # print rois_per_image, fg_rois_per_this_image, bg_rois_per_this_image 
     # Sample background regions without replacement
     if bg_inds.size > 0:
         bg_inds = npr.choice(bg_inds, size=bg_rois_per_this_image, replace=False)

@@ -61,7 +61,7 @@ void im2col_cpu(const Dtype* data_im, const int channels,
     const int stride_h, const int stride_w,
     const int dilation_h, const int dilation_w,
     Dtype* data_col) {
-#if 1
+#if 0
   const int output_h = (height + 2 * pad_h -
     (dilation_h * (kernel_h - 1) + 1)) / stride_h + 1;
   const int output_w = (width + 2 * pad_w -
@@ -103,15 +103,20 @@ void im2col_cpu(const Dtype* data_im, const int channels,
     int w_offset = c % kernel_w;
     int h_offset = (c / kernel_w) % kernel_h;
     int c_im = c / kernel_h / kernel_w;
+
+    const int hc0 = h_offset * dilation_h - pad_h;
+    const int wc0 = w_offset * dilation_w - pad_w;
     for (int h = 0; h < height_col; ++h) {
-      int h_pad = h * stride_h - pad_h + h_offset * dilation_h;
+      int h_pad = h * stride_h - hc0;
+
+      const int row_offset = (c * height_col + h) * width_col;
+      const int srow_offset = (c_im * height + h_pad) * width;
       for (int w = 0; w < width_col; ++w) {
-        int w_pad = w * stride_w - pad_w + w_offset * dilation_w;
+        int w_pad = w * stride_w - wc0;
         if ((((unsigned)h_pad) < ((unsigned)height)) && (((unsigned)w_pad) < ((unsigned)width)))
-          data_col[(c * height_col + h) * width_col + w] =
-            data_im[(c_im * height + h_pad) * width + w_pad];
+          data_col[row_offset + w] = data_im[srow_offset + w_pad];
         else {
-          data_col[(c * height_col + h) * width_col + w] = 0.;
+          data_col[row_offset + w] = 0.;
         }
       }
     }
@@ -231,7 +236,7 @@ void col2im_cpu(const Dtype* data_col, const int channels,
     const int stride_h, const int stride_w,
     const int dilation_h, const int dilation_w,
     Dtype* data_im) {
-#if 1
+#if 0
   caffe_set(height * width * channels, Dtype(0), data_im);
   const int output_h = (height + 2 * pad_h -
     (dilation_h * (kernel_h - 1) + 1)) / stride_h + 1;
@@ -266,18 +271,25 @@ void col2im_cpu(const Dtype* data_col, const int channels,
   int height_col = (height + 2 * pad_h - dil_patch_h) / stride_h + 1;
   int width_col = (width + 2 * pad_w - dil_patch_w) / stride_w + 1;
   int channels_col = channels * kernel_h * kernel_w;
+
+  caffe_set(height * width * channels, Dtype(0), data_im);
 #pragma omp parallel for
   for (int c = 0; c < channels_col; ++c) {
     int w_offset = c % kernel_w;
     int h_offset = (c / kernel_w) % kernel_h;
     int c_im = c / kernel_h / kernel_w;
+
+    const int hc0 = h_offset * dilation_h - pad_h;
+    const int wc0 = w_offset * dilation_w - pad_w;
     for (int h = 0; h < height_col; ++h) {
-      int h_pad = h * stride_h - pad_h + h_offset * dilation_h;
+      int h_pad = h * stride_h - hc0;
+
+      const int srow_offset = (c_im * height + h_pad) * width;
+      const int row_offset = (c * height_col + h) * width_col;
       for (int w = 0; w < width_col; ++w) {
-        int w_pad = w * stride_w - pad_w + w_offset * dilation_w;
+        int w_pad = w * stride_w - wc0;
         if ((((unsigned)h_pad) < ((unsigned)height)) && (((unsigned)w_pad) < ((unsigned)width))) {
-          data_im[(c_im * height + h_pad) * width + w_pad] +=
-            data_col[(c * height_col + h) * width_col + w];
+          data_im[srow_offset + w_pad] += data_col[row_offset + w];
         }
       }
     }

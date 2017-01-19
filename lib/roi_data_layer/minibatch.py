@@ -144,7 +144,7 @@ def _get_image_blob(roidb, scale_inds):
                 im = cPickle.load(f)
         else:
             im = cv2.imread(roidb[i]['image'])
-            print roidb[i]['image']
+            # print roidb[i]['image']
         if roidb[i]['flipped']:
             im = im[:, ::-1, :]
         target_size = cfg.TRAIN.SCALES[scale_inds[i]]

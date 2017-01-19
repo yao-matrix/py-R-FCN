@@ -313,8 +313,8 @@ void Solver<Dtype>::Step(int iters) {
     // average the loss across iterations for smoothed reporting
     UpdateSmoothedLoss(loss, start_iter, average_loss);
 
-    LOG_IF(ERROR, Caffe::root_solver()) << "Iteration " << iter_
-          << ", loss = " << smoothed_loss_;
+    // LOG_IF(ERROR, Caffe::root_solver()) << "Iteration " << iter_
+    //      << ", loss = " << smoothed_loss_;
 
     if (display) {
 #ifdef USE_MPI
