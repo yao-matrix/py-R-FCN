@@ -462,7 +462,7 @@ class MKLBatchNormLayer : public Layer<Dtype> {
   bool use_global_stats_;
   bool blobs_initialized_;
   dnnBatchNormalizationFlag_t flags_;
-  Blob<Dtype> mean_, variance_;
+  Blob<Dtype> mean_, variance_, stdvar_;
 };
 
 template <typename Dtype>

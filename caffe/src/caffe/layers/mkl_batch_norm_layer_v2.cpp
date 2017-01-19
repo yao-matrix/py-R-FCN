@@ -163,8 +163,10 @@ void MKLBatchNormLayer<Dtype>::Init(const vector<Blob<Dtype>*>& bottom,
   if (this->blobs_.size() > 2) {
     mean_.Reshape(scaleshift_shape);
     variance_.Reshape(scaleshift_shape);
+    stdvar_.Reshape(scaleshift_shape);
     caffe_set(mean_.count(), Dtype(0), mean_.mutable_cpu_data());
     caffe_set(variance_.count(), Dtype(0), variance_.mutable_cpu_data());
+    caffe_set(stdvar_.count(), Dtype(0), stdvar_.mutable_cpu_data());
     this->blobs_[2].reset(new Blob<Dtype>(scaleshift_shape));
     this->blobs_[3].reset(new Blob<Dtype>(scaleshift_shape));
     for (int i = 2; i < 4; i++) {
@@ -306,6 +308,12 @@ void MKLBatchNormLayer<Dtype>::Forward_cpu(
         // for (int i = 0; i < mean_.count(); i++) {
         //    LOG(ERROR) << mean_.cpu_data()[i] << ", ";
         // }
+
+        // back propagation scalar
+        caffe_copy(variance_.count(), variance_.cpu_data(), stdvar_.mutable_cpu_data());
+        caffe_add_scalar(stdvar_.count(), eps_, stdvar_.mutable_cpu_data());
+        caffe_powx(stdvar_.count(), stdvar_.cpu_data(), Dtype(0.5), stdvar_.mutable_cpu_data());
+        caffe_div(stdvar_.count(), scaleShift_buffer_, stdvar_.cpu_data(), stdvar_.mutable_cpu_data());
       }
   }
 
@@ -398,6 +406,7 @@ template <typename Dtype>
 void MKLBatchNormLayer<Dtype>::Backward_cpu(
     const vector<Blob<Dtype>*>& top, const vector<bool>& propagate_down,
     const vector<Blob<Dtype>*>& bottom) {
+#if 0
   void *bottom_data = NULL;
   if (bottom[0] == top[0]) {
     bottom_data = reinterpret_cast<void *>(
@@ -456,6 +465,24 @@ void MKLBatchNormLayer<Dtype>::Backward_cpu(
       }
     }
   }
+#else
+  if (propagate_down[0]) {
+    const Dtype* top_diff = top[0]->cpu_diff();
+    Dtype* bottom_diff = bottom[0]->mutable_cpu_diff();
+    const Dtype* coef = stdvar_.cpu_data();
+    const int pixels_per_plane = top[0]->width() * top[0]->height();
+    const int pixels_per_image = pixels_per_plane * top[0]->channels();
+    for (int n = 0; n < top[0]->num(); ++n) {
+      const int image_offset = n * pixels_per_image;
+      for (int c = 0; c < top[0]->channels(); ++c) {
+        const Dtype factor = coef[c];
+        const Dtype* top_offset = top_diff + image_offset + c * pixels_per_plane;
+        Dtype* bottom_offset = bottom_diff + image_offset + c * pixels_per_plane;
+        caffe_cpu_scale(pixels_per_plane, factor, top_offset, bottom_offset);
+      }
+    }
+  }
+#endif
 
 #if DUMP_LAYER_IO
   if (1) {

@@ -128,7 +128,7 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
   // Backward compatibility for obsolete compile-time flags
 #ifdef USE_MKL2017_AS_DEFAULT_ENGINE
   if (filtered_param.engine() == "") {
-    // filtered_param.set_engine("MKL2017");
+    filtered_param.set_engine("MKL2017");
   }
 #endif
 
@@ -195,7 +195,7 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
           // !layer_param.name().compare("res3a_branch1") ||
           // !layer_param.name().compare("res3a_branch2a") ||
           // !layer_param.name().compare("rpn_bbox_pred")
-          // layer_param.type().compare("BatchNorm") &&
+          layer_param.type().compare("BatchNorm") &&
           layer_param.type().compare("ReLU") &&
           layer_param.type().compare("Convolution") &&
           layer_param.type().compare("Eltwise") &&
