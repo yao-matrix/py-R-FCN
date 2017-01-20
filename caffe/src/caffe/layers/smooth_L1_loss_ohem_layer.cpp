@@ -105,12 +105,9 @@ void SmoothL1LossOHEMLayer<Dtype>::Forward_cpu(
         diff_.cpu_data(),
         diff_.mutable_cpu_data());  // d := w * (b0 - b1)
     }
-    //SmoothL1ForwardGPU<Dtype> << <CAFFE_GET_BLOCKS(count),
-      //CAFFE_CUDA_NUM_THREADS >> >(count, diff_.gpu_data(),
-      //errors_.mutable_gpu_data());
 
-	//CUDA_KERNEL_LOOP(index, n) {
-    for(int index =0; index<count; index++) {
+#pragma omp parallel for
+    for (int index = 0; index < count; index++) {
       Dtype val = diff_.cpu_data()[index];
       Dtype abs_val = abs(val);
       if (abs_val < 1) {
@@ -121,7 +118,6 @@ void SmoothL1LossOHEMLayer<Dtype>::Forward_cpu(
     }
 
     Dtype loss = caffe_cpu_asum(count, errors_.cpu_data());
-    //int spatial_dim = diff_.height() * diff_.width();
 
     Dtype pre_fixed_normalizer =
       this->layer_param_.loss_param().pre_fixed_normalizer();
@@ -130,20 +126,17 @@ void SmoothL1LossOHEMLayer<Dtype>::Forward_cpu(
 
     // Output per-instance loss
     if (top.size() >= 2) {
-      //kernel_channel_sum<Dtype>(outer_num_, bottom[0]->channels(),
-        //inner_num_, errors_.gpu_data(), top[1]->mutable_gpu_data());
-	  	//CUDA_KERNEL_LOOP(index, num * spatial_dim) {
-	  	
-		for (int i = 0; i < outer_num_; ++i) {
-			for (int j = 0; j < inner_num_; j++) {
-			Dtype sum = 0;
-			for (int c = 0; c < bottom[0]->channels(); ++c) {
-				sum += errors_.cpu_data()[(i * bottom[0]->channels() + c) * inner_num_ + j];
-				}
-			top[1]->mutable_cpu_data()[i*inner_num_+j] = sum;
-				}
-			}
-    	}
+#pragma omp parallel for collapse(2)
+        for (int i = 0; i < outer_num_; ++i) {
+            for (int j = 0; j < inner_num_; j++) {
+                Dtype sum = 0;
+                for (int c = 0; c < bottom[0]->channels(); ++c) {
+                    sum += errors_.cpu_data()[(i * bottom[0]->channels() + c) * inner_num_ + j];
+                }
+                top[1]->mutable_cpu_data()[i * inner_num_ + j] = sum;
+            }
+        }
+    }
 }
 
 #if 0
@@ -168,27 +161,21 @@ void SmoothL1LossOHEMLayer<Dtype>::Backward_cpu(
   const vector<Blob<Dtype>*>& bottom) {
     int count = diff_.count();
 	
-    //SmoothL1BackwardGPU<Dtype> << <CAFFE_GET_BLOCKS(count),
-      //CAFFE_CUDA_NUM_THREADS >> >(count, diff_.gpu_data(),
-      //diff_.mutable_gpu_data());
-    //CUDA_POST_KERNEL_CHECK;
-
-	//CUDA_KERNEL_LOOP(index, n) {
 #pragma omp parallel for
-	for(int index=0; index < count; index++) {
-		Dtype val = diff_.cpu_data()[index];
-		Dtype abs_val = abs(val);
-		if (abs_val < 1) {
-			diff_.mutable_cpu_data()[index] = val;
+	for(int index = 0; index < count; index++) {
+        Dtype val = diff_.cpu_data()[index];
+        Dtype abs_val = abs(val);
+        if (abs_val < 1) {
+            diff_.mutable_cpu_data()[index] = val;
 		} else {
 			diff_.mutable_cpu_data()[index] = (Dtype(0) < val) - (val < Dtype(0));
-			}
-		}
-	
+        }
+    }
+
+#pragma omp parallel for
     for (int i = 0; i < 2; ++i) {
       if (propagate_down[i]) {
         const Dtype sign = (i == 0) ? 1 : -1;
-        //int spatial_dim = diff_.height() * diff_.width();
 
         Dtype pre_fixed_normalizer =
           this->layer_param_.loss_param().pre_fixed_normalizer();
@@ -202,7 +189,7 @@ void SmoothL1LossOHEMLayer<Dtype>::Backward_cpu(
           Dtype(0),                        // beta
           bottom[i]->mutable_cpu_diff());  // y
       	}
-    	}
+    }
 }
 
 #ifdef CPU_ONLY
