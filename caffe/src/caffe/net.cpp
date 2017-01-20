@@ -189,18 +189,18 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
           // !layer_param.name().compare("conv1") ||
           // !layer_param.name().compare("rpn_cls_score") ||
           // !layer_param.name().compare("rpn_bbox_pred") ||
-          // !layer_param.name().compare("rfcn_cls")
+          !layer_param.name().compare("rfcn_cls") ||
           // !layer_param.name().compare("res4a_branch1") ||
           // !layer_param.name().compare("res4a_branch2a") ||
           // !layer_param.name().compare("res3a_branch1") ||
           // !layer_param.name().compare("res3a_branch2a") ||
           // !layer_param.name().compare("rpn_bbox_pred")
-          layer_param.type().compare("BatchNorm") &&
+          (layer_param.type().compare("BatchNorm") &&
           layer_param.type().compare("ReLU") &&
           layer_param.type().compare("Convolution") &&
           layer_param.type().compare("Eltwise") &&
           layer_param.type().compare("Pooling") &&
-          layer_param.type().compare("Split")
+          layer_param.type().compare("Split"))
          ) {
 	     // LOG(ERROR) << layer_param.name() << " use CAFFE Engine";
 	     param.mutable_layer(layer_id)->set_engine("CAFFE");
