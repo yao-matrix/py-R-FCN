@@ -475,6 +475,7 @@ void MKLBatchNormLayer<Dtype>::Backward_cpu(
 #pragma omp parallel for
     for (int n = 0; n < top[0]->num(); ++n) {
       const int image_offset = n * pixels_per_image;
+#pragma omp parallel for
       for (int c = 0; c < top[0]->channels(); ++c) {
         const Dtype factor = coef[c];
         const Dtype* top_offset = top_diff + image_offset + c * pixels_per_plane;

@@ -15,6 +15,7 @@ class Timer(object):
         self.start_time = 0.
         self.diff = 0.
         self.average_time = 0.
+        self.skip_times = 0
 
     def tic(self):
         # using time.time instead of time.clock because time time.clock
@@ -23,9 +24,12 @@ class Timer(object):
 
     def toc(self, average=True):
         self.diff = time.time() - self.start_time
-        self.total_time += self.diff
-        self.calls += 1
-        self.average_time = self.total_time / self.calls
+        if self.skip_times < 10:
+            self.skip_times += 1
+        else:
+            self.total_time += self.diff
+            self.calls += 1
+            self.average_time = self.total_time / self.calls
         if average:
             return self.average_time
         else:
