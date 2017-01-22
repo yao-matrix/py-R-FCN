@@ -74,9 +74,9 @@ void ConvolutionLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   for (int i = 0; i < bottom.size(); ++i) {
     const Dtype* bottom_data = bottom[i]->cpu_data();
     Dtype* top_data = top[i]->mutable_cpu_data();
-#ifdef _OPENMP
-    #pragma omp parallel for num_threads(this->num_of_threads_)
-#endif
+// #ifdef _OPENMP
+//    #pragma omp parallel for num_threads(this->num_of_threads_)
+// #endif
       for (int n = 0; n < this->num_; ++n) {
         this->forward_cpu_gemm(bottom_data + n*this->bottom_dim_,
                                weight,
@@ -193,30 +193,30 @@ void ConvolutionLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
     // before GEMM ops and results has to be summed up after GEMM ops.
 
     if (this->param_propagate_down_[0]) {
-#ifdef _OPENMP
-      this->clear_weight_mt();
-      #pragma omp parallel num_threads(this->num_of_threads_)
-#endif
+// #ifdef _OPENMP
+//      this->clear_weight_mt();
+//      #pragma omp parallel num_threads(this->num_of_threads_)
+// #endif
       {
-#ifdef _OPENMP
-        #pragma omp for
-#endif
+// #ifdef _OPENMP
+//        #pragma omp for
+// #endif
         for (int n = 0; n < this->num_; ++n) {
           // gradient w.r.t. weight. Note that we will accumulate diffs.
           this->weight_cpu_gemm(bottom_data + n * this->bottom_dim_,
                 top_diff + n * this->top_dim_, weight_diff);
         }
 
-#ifdef _OPENMP
-        this->sum_weight_mt(weight_diff);
-#endif
+// #ifdef _OPENMP
+//        this->sum_weight_mt(weight_diff);
+// #endif
       }
     }
 
     if (propagate_down[i]) {
-#ifdef _OPENMP
-      #pragma omp parallel for num_threads(this->num_of_threads_)
-#endif
+// #ifdef _OPENMP
+//      #pragma omp parallel for num_threads(this->num_of_threads_)
+// #endif
         for (int n = 0; n < this->num_; ++n) {
           // gradient w.r.t. bottom data, if necessary.
           this->backward_cpu_gemm(top_diff + n * this->top_dim_, weight,
