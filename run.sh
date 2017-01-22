@@ -1,10 +1,12 @@
 export GLOG_minloglevel=2
 
 
-# export OMP_NUM_THREADS
+unset OMP_NUM_THREADS
+# export OMP_NUM_THREADS=44
 # export MKL_NUM_THREADS
 
 # export OMP_WAIT_POLICY=passive
+unset MKL_THREADING_LAYER
 # export MKL_THREADING_LAYER=gnu
 
 
