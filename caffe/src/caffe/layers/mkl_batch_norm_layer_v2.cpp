@@ -402,11 +402,12 @@ void MKLBatchNormLayer<Dtype>::Forward_cpu(
 
 }
 
+#define ENABLE_MKL_BWDBN
 template <typename Dtype>
 void MKLBatchNormLayer<Dtype>::Backward_cpu(
     const vector<Blob<Dtype>*>& top, const vector<bool>& propagate_down,
     const vector<Blob<Dtype>*>& bottom) {
-#ifdef ENABLE_MKL_BN_BW
+#ifdef ENABLE_MKL_BWDBN
   void *bottom_data = NULL;
   if (bottom[0] == top[0]) {
     bottom_data = reinterpret_cast<void *>(
@@ -435,8 +436,8 @@ void MKLBatchNormLayer<Dtype>::Backward_cpu(
   BatchNorm_res[dnnResourceSrc] = bottom_data;
   BatchNorm_res[dnnResourceScaleShift] = scaleShift_buffer_;
   BatchNorm_res[dnnResourceDiffScaleShift] = scaleShift_diff_;
-  BatchNorm_res[dnnResourceMean] = use_global_stats_ ? mean_.mutable_cpu_data() : NULL;;
-  BatchNorm_res[dnnResourceVariance] = use_global_stats_ ? variance_.mutable_cpu_data() : NULL;;
+  BatchNorm_res[dnnResourceMean] = use_global_stats_ ? mean_.mutable_cpu_data() : NULL;
+  BatchNorm_res[dnnResourceVariance] = use_global_stats_ ? variance_.mutable_cpu_data() : NULL;
 
   BatchNorm_res[dnnResourceDiffDst] = bwd_top_diff->get_converted_prv(top[0], true);
   // LOG(ERROR) << this->layer_param_.name() << " diff dst is " << BatchNorm_res[dnnResourceDiffDst];
