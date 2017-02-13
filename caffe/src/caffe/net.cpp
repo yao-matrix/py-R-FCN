@@ -103,6 +103,7 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
   CHECK(Caffe::root_solver() || root_net_)
       << "root_net_ needs to be set for all non-root solvers";
 
+
 #ifdef _OPENMP
   LOG(INFO) << "OpenMP is enabled";
   static bool executed = false;
@@ -454,9 +455,10 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
   }
   ShareWeights();
   debug_info_ = param.debug_info();
-  time_info_ = param.time_info();
+  time_info_ = 1; // param.time_info();
+  
 
-  // LOG(ERROR) << "init done with " << param.engine();
+  // LOG(ERROR) << "init done with time_info " << time_info_;
 
 #ifdef USE_MLSL
 
@@ -536,6 +538,14 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
   }
 
 #endif /* USE_MLSL */
+  
+  iter_cnt = 0;
+  forward_time_per_layer.resize(600, 0.0);
+  backward_time_per_layer.resize(600, 0.0);
+
+  forward_time = 0.0;
+  backward_time = 0.0;
+  FLAGS_iterations = 20;
 
   LOG_IF(INFO, Caffe::root_solver()) << "Network initialization done.";
 }
@@ -1112,16 +1122,33 @@ template <typename Dtype>
 Dtype Net<Dtype>::ForwardFromTo(int start, int end) {
   CHECK_GE(start, 0);
   CHECK_LT(end, layers_.size());
+  
+  if (time_info_) {
+      forward_timer.Start();
+      if (iter_cnt == 1) {
+        total_timer.Start();
+      }
+  }
+  
   Dtype loss = 0;
   for (int i = start; i <= end; ++i) {
-    PERFORMANCE_MEASUREMENT_BEGIN();
+    if (time_info_ && iter_cnt >= 1) {
+        forward_iter_timer.Start();
+        // LOG(ERROR) << "Forwarding " << layer_names_[i] << " start";
+    }
 
-    // LOG(ERROR) << layer_names_[i] << " forward start";
     Dtype layer_loss = layers_[i]->Forward(bottom_vecs_[i], top_vecs_[i]);
     // LOG(ERROR) << layer_names_[i] << " forward done";
 
     PERFORMANCE_MEASUREMENT_END((std::string("FW_") + layer_names_[i]).c_str());
     loss += layer_loss;
+
+    if (time_info_ && iter_cnt >= 1) {
+        double time_cost = forward_iter_timer.MicroSeconds();
+        forward_time_per_layer[i] += time_cost;
+        // LOG(ERROR) << "Forwarding " << layer_names_[i] << " " << time_cost / 1000. << " ms";
+    }
+
     if (debug_info_) { ForwardDebugInfo(i); }
   }
   return loss;
@@ -1166,17 +1193,58 @@ template <typename Dtype>
 void Net<Dtype>::BackwardFromTo(int start, int end) {
   CHECK_GE(end, 0);
   CHECK_LT(start, layers_.size());
+
+  if (time_info_ && iter_cnt >= 1) {
+    backward_timer.Start();
+  }
   for (int i = start; i >= end; --i) {
     if (layer_need_backward_[i]) {
       PERFORMANCE_MEASUREMENT_BEGIN();
-
+      if (time_info_ && iter_cnt >= 1) {
+          backward_iter_timer.Start();
+      }
       layers_[i]->Backward(
           top_vecs_[i], bottom_need_backward_[i], bottom_vecs_[i]);
 
       PERFORMANCE_MEASUREMENT_END((std::string("BW_")+layer_names_[i]).c_str());
 
       if (debug_info_) { BackwardDebugInfo(i); }
+
+      if (time_info_ && iter_cnt >= 1) {
+        double time_cost = backward_iter_timer.MicroSeconds();
+        backward_time_per_layer[i] += time_cost;
+        // LOG(ERROR) << "Backwarding " << layer_names_[i] << " " << time_cost / 1000 << " ms";
+      }
     }
+  }
+
+  if (time_info_) {
+  	backward_time += backward_timer.MicroSeconds();
+	iter_cnt++;
+
+	LOG(ERROR) << "##################### Iteration : " << iter_cnt;
+	if (iter_cnt == FLAGS_iterations) {
+		LOG(ERROR) << "Average time per layer: ";
+		for (int i = 0; i < layers_.size(); ++i) {
+		const caffe::string& layername = layers_[i]->layer_param().name();
+		LOG(ERROR) << std::setfill(' ') << std::setw(10) << layername <<
+		  "\tforward: " << forward_time_per_layer[i] / 1000. /
+		  FLAGS_iterations << " ms.";
+		LOG(ERROR) << std::setfill(' ') << std::setw(10) << layername  <<
+		  "\tbackward: " << backward_time_per_layer[i] / 100.0 /
+		  FLAGS_iterations << " ms.";
+		}
+		
+		LOG(ERROR) << "Average Forward pass: " << forward_time / 1000. /
+		(FLAGS_iterations - 1) << " ms.";
+		LOG(ERROR) << "Average Backward pass: " << backward_time / 1000. /
+		(FLAGS_iterations - 1) << " ms.";
+		LOG(ERROR) << "Average Forward-Backward: " << total_timer.MilliSeconds() /
+		(FLAGS_iterations - 1) << " ms.";
+		LOG(ERROR) << "Total Time: " << total_timer.MilliSeconds() << " ms.";
+		LOG(ERROR) << "*** Benchmark ends ***";
+		exit(0);
+	}
   }
 }
 

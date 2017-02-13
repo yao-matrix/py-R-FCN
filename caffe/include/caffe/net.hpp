@@ -48,6 +48,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "caffe/common.hpp"
 #include "caffe/layer.hpp"
 #include "caffe/proto/caffe.pb.h"
+#include "caffe/util/benchmark.hpp"
 
 namespace caffe {
 
@@ -405,6 +406,20 @@ class Net {
   bool debug_info_;
   /// Whether to calculate each layer time cost
   bool time_info_;
+  int iter_cnt;
+  std::vector<double> forward_time_per_layer;
+  std::vector<double> backward_time_per_layer;
+
+  Timer forward_iter_timer;
+  Timer backward_iter_timer;
+  Timer total_timer;
+  Timer forward_timer;
+  Timer backward_timer;
+
+  double forward_time;
+  double backward_time;
+  int FLAGS_iterations;
+
   /// The root net that actually holds the shared layers in data parallelism
   const Net* const root_net_;
   DISABLE_COPY_AND_ASSIGN(Net);
