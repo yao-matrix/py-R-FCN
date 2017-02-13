@@ -75,7 +75,7 @@ echo $VERSION_LINE  # Return Version Line
 DST=`dirname $0`
 OMP=0 
 VERSION_MATCH=20160906
-ARCHIVE_BASENAME=mklml_lnx_2017.0.2.20170110.tgz
+ARCHIVE_BASENAME=mklml_lnx_2017.0.2.20170209.tgz
 MKL_CONTENT_DIR=`echo $ARCHIVE_BASENAME | rev | cut -d "." -f 2- | rev`
 # GITHUB_RELEASE_TAG=self_containted_MKLGOLD_u1
 MKLURL="https://github.com/01org/mkl-dnn/releases/download/v0.5/$ARCHIVE_BASENAME"
