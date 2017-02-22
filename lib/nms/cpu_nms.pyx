@@ -13,7 +13,6 @@ cimport openmp
 from cython.parallel cimport prange
 from cython.parallel cimport parallel
 
-
 cdef inline np.float32_t max(np.float32_t a, np.float32_t b) nogil:
     return a if a >= b else b
 
@@ -22,6 +21,14 @@ cdef inline np.float32_t min(np.float32_t a, np.float32_t b) nogil:
 
 cdef inline np.int_t thresholding(np.float32_t ovr, np.float32_t thresh) nogil:
     return 1 if ovr >= thresh else 0
+
+import os
+from multiprocessing import cpu_count
+cdef int set_num = 0
+try:
+    set_num = os.environ["OMP_NUM_THREADS"]
+except:
+    set_num = cpu_count() / 2
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -51,13 +58,7 @@ def cpu_nms(np.ndarray[np.float32_t, ndim=2] dets, np.float thresh):
     cdef np.float32_t inter, ovr
     cdef np.float32_t threshc = thresh
 
-    import os
-    from multiprocessing import cpu_count
-    set_num = 0
-    try:
-        set_num = os.environ["OMP_NUM_THREADS"]
-    except:
-        set_num = cpu_count() / 2
+    global set_num
 
     keep = []
     # print "ndets size: %d" % (ndets)
