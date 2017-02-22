@@ -455,7 +455,7 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
   }
   ShareWeights();
   debug_info_ = param.debug_info();
-  time_info_ = 1; // param.time_info();
+  time_info_ = 0; // param.time_info();
   
 
   // LOG(ERROR) << "init done with time_info " << time_info_;
@@ -1123,7 +1123,7 @@ Dtype Net<Dtype>::ForwardFromTo(int start, int end) {
   CHECK_GE(start, 0);
   CHECK_LT(end, layers_.size());
   
-  if (time_info_) {
+  if (time_info_ && iter_cnt >= 1) {
       forward_timer.Start();
       if (iter_cnt == 1) {
         total_timer.Start();
@@ -1151,6 +1151,11 @@ Dtype Net<Dtype>::ForwardFromTo(int start, int end) {
 
     if (debug_info_) { ForwardDebugInfo(i); }
   }
+
+  if (time_info_ && iter_cnt >= 1) {
+    forward_time += forward_timer.MicroSeconds();
+  }
+
   return loss;
 }
 

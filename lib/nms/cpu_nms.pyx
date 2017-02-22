@@ -7,13 +7,24 @@
 
 import numpy as np
 cimport numpy as np
+cimport cython
+cimport openmp
 
-cdef inline np.float32_t max(np.float32_t a, np.float32_t b):
+from cython.parallel cimport prange
+from cython.parallel cimport parallel
+
+
+cdef inline np.float32_t max(np.float32_t a, np.float32_t b) nogil:
     return a if a >= b else b
 
-cdef inline np.float32_t min(np.float32_t a, np.float32_t b):
+cdef inline np.float32_t min(np.float32_t a, np.float32_t b) nogil:
     return a if a <= b else b
 
+cdef inline np.int_t thresholding(np.float32_t ovr, np.float32_t thresh) nogil:
+    return 1 if ovr >= thresh else 0
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def cpu_nms(np.ndarray[np.float32_t, ndim=2] dets, np.float thresh):
     cdef np.ndarray[np.float32_t, ndim=1] x1 = dets[:, 0]
     cdef np.ndarray[np.float32_t, ndim=1] y1 = dets[:, 1]
@@ -38,8 +49,18 @@ def cpu_nms(np.ndarray[np.float32_t, ndim=2] dets, np.float thresh):
     cdef np.float32_t xx1, yy1, xx2, yy2
     cdef np.float32_t w, h
     cdef np.float32_t inter, ovr
+    cdef np.float32_t threshc = thresh
+
+    import os
+    from multiprocessing import cpu_count
+    set_num = 0
+    try:
+        set_num = os.environ["OMP_NUM_THREADS"]
+    except:
+        set_num = cpu_count()
 
     keep = []
+    # print "ndets size: %d" % (ndets)
     for _i in range(ndets):
         i = order[_i]
         if suppressed[i] == 1:
@@ -50,19 +71,21 @@ def cpu_nms(np.ndarray[np.float32_t, ndim=2] dets, np.float thresh):
         ix2 = x2[i]
         iy2 = y2[i]
         iarea = areas[i]
-        for _j in range(_i + 1, ndets):
-            j = order[_j]
-            if suppressed[j] == 1:
-                continue
-            xx1 = max(ix1, x1[j])
-            yy1 = max(iy1, y1[j])
-            xx2 = min(ix2, x2[j])
-            yy2 = min(iy2, y2[j])
-            w = max(0.0, xx2 - xx1 + 1)
-            h = max(0.0, yy2 - yy1 + 1)
-            inter = w * h
-            ovr = inter / (iarea + areas[j] - inter)
-            if ovr >= thresh:
-                suppressed[j] = 1
+        thread_num = set_num if (ndets - _i - 1) > set_num else (ndets - _i - 1)
+        if thread_num == 0:
+            continue
+        with nogil:
+            for _j in prange(_i + 1, ndets, schedule = 'dynamic', num_threads = thread_num):
+                j = order[_j]
+                if suppressed[j] == 0:
+                    xx1 = max(ix1, x1[j])
+                    yy1 = max(iy1, y1[j])
+                    xx2 = min(ix2, x2[j])
+                    yy2 = min(iy2, y2[j])
+                    w = max(0.0, xx2 - xx1 + 1)
+                    h = max(0.0, yy2 - yy1 + 1)
+                    inter = w * h
+                    ovr = inter / (iarea + areas[j] - inter)
+                    suppressed[j] = thresholding(ovr, threshc)
 
     return keep
