@@ -1236,7 +1236,7 @@ void Net<Dtype>::BackwardFromTo(int start, int end) {
 		  "\tforward: " << forward_time_per_layer[i] / 1000. /
 		  FLAGS_iterations << " ms.";
 		LOG(ERROR) << std::setfill(' ') << std::setw(10) << layername  <<
-		  "\tbackward: " << backward_time_per_layer[i] / 100.0 /
+		  "\tbackward: " << backward_time_per_layer[i] / 1000.0 /
 		  FLAGS_iterations << " ms.";
 		}
 		
