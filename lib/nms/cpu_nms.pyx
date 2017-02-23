@@ -57,7 +57,7 @@ def cpu_nms(np.ndarray[np.float32_t, ndim=2] dets, np.float thresh):
     try:
         set_num = os.environ["OMP_NUM_THREADS"]
     except:
-        set_num = cpu_count()
+        set_num = cpu_count() / 2
 
     keep = []
     # print "ndets size: %d" % (ndets)
