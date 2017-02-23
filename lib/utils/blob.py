@@ -35,8 +35,7 @@ def prep_im_for_blob(im, pixel_means, target_size, max_size):
     pixel_means = pixel_means.astype(np.float32, copy=False)
     # im -= pixel_means
     cpu_subtract(im, pixel_means)
-    # finish = time()
-    # print "mean subtraction takes: %f ms" % ((finish - start) * 1000.)
+
     im_shape = im.shape
     im_size_min = np.min(im_shape[0:2])
     im_size_max = np.max(im_shape[0:2])
