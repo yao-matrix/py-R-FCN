@@ -480,10 +480,11 @@ message LayerParameter {
   optional ThresholdParameter threshold_param = 128;
   optional TileParameter tile_param = 138;
   optional WindowDataParameter window_data_param = 129;
+  optional SpatialDropoutParameter spatial_dropout_param = 180;
   optional MILDataParameter mil_data_param = 0x004d4944; //"MID"
   optional MILParameter mil_param = 0x004d494c; //"MIL"
   optional string engine = 151 [default = ""];
-   optional RemoteDataParameter remote_data_param = 152;
+  optional RemoteDataParameter remote_data_param = 152;
 }
 
 // Message that stores parameters used to apply transformation
@@ -797,6 +798,10 @@ message RemoteDataParameter {
 }
 
 message DropoutParameter {
+  optional float dropout_ratio = 1 [default = 0.5]; // dropout ratio
+}
+
+message SpatialDropoutParameter {
   optional float dropout_ratio = 1 [default = 0.5]; // dropout ratio
 }
 
