@@ -46,20 +46,18 @@ namespace bp = boost::python;
 #include <cstring>
 #include <map>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "boost/algorithm/string.hpp"
 #include "boost/make_shared.hpp"
 #include "caffe/caffe.hpp"
-#include "caffe/training_utils.hpp"
-#include "caffe/util/performance.hpp"
+#include "caffe/internode/mpiutil.hpp"
+#include "caffe/multinode/multinode.hpp"
 #include "caffe/util/signal_handler.h"
-
-#include "caffe/util/bbox_util.hpp"
 
 #ifdef USE_MLSL
 #include "caffe/multinode/MlslSync.hpp"
+#include "caffe/internode/mlsl_util.hpp"
 #endif /* USE_MLSL */
 
 using caffe::Blob;
@@ -101,18 +99,17 @@ DEFINE_string(sigint_effect, "stop",
 DEFINE_string(sighup_effect, "snapshot",
              "Optional; action to take when a SIGHUP signal is received: "
              "snapshot, stop or none.");
+DEFINE_string(param_server, "",
+    "Optional; triggers multinode mode, usage: --param_server=mpi");
+DEFINE_string(listen_address, "",
+    "Optional; multinode mode, bind address for data server");
+DEFINE_int32(comm_threads, 1,
+    "Optional; multinode mode,"
+    " The number of threads used by communication code.");
 DEFINE_bool(forward_only, false,
     "Optional; Execute only forward pass");
 DEFINE_string(engine, "",
     "Optional; Engine sequence in format: engine:subengine_1,subengine_2,...");
-DEFINE_string(collect_dir, "collect_out",
-    "Optional; Directory with reference binary files");
-DEFINE_string(compare_output_dir, "compare_out",
-    "Optional; Directory with output files");
-DEFINE_double(epsilon, 1e-3, "Optional; Layer output comparison error");
-DEFINE_bool(detection, false,
-    "Optional; Enables detection for testing. "
-    "By default it is false and classification is on.");
 
 // A simple registry for caffe commands.
 typedef int (*BrewFunction)();
@@ -179,6 +176,13 @@ caffe::Phase get_phase_from_flags(caffe::Phase default_value) {
   return caffe::TRAIN;  // Avoid warning
 }
 
+// Parse stages from flags
+vector<string> get_stages_from_flags() {
+  vector<string> stages;
+  boost::split(stages, FLAGS_stage, boost::is_any_of(","));
+  return stages;
+}
+
 // caffe commands to call by
 //     caffe <command> <args>
 //
@@ -226,7 +230,6 @@ caffe::SolverAction::Enum GetRequestedAction(
     return caffe::SolverAction::NONE;
   }
   LOG(FATAL) << "Invalid signal effect \""<< flag_value << "\" was specified";
-  return caffe::SolverAction::UNKNOWN;
 }
 
 // Train / Finetune a model.
@@ -235,26 +238,19 @@ int train() {
   CHECK(!FLAGS_snapshot.size() || !FLAGS_weights.size())
       << "Give a snapshot to resume training or weights to finetune "
       "but not both.";
+  vector<string> stages = get_stages_from_flags();
 
   caffe::SolverParameter solver_param;
-  if (!caffe::ReadProtoFromTextFile(FLAGS_solver, &solver_param)) {
-    caffe::MultiPhaseSolverParameter multi_solver_params;
-    CHECK(caffe::ReadProtoFromTextFile(FLAGS_solver, &multi_solver_params))
-      << "Failed to parse SolverParameter file: "  <<  FLAGS_solver;
-    return multiphase_train(
-      &multi_solver_params,
-      FLAGS_solver,
-      FLAGS_engine,
-      FLAGS_level,
-      FLAGS_stage);
-  }
+  caffe::ReadSolverParamsFromTextFileOrDie(FLAGS_solver, &solver_param);
 
-  use_flags(
-    &solver_param,
-    FLAGS_solver,
-    FLAGS_engine,
-    FLAGS_level,
-    FLAGS_stage);
+  // Override engine if provided in cmd line
+  if (FLAGS_engine != "")
+    solver_param.set_engine(FLAGS_engine);
+
+  solver_param.mutable_train_state()->set_level(FLAGS_level);
+  for (int i = 0; i < stages.size(); i++) {
+    solver_param.mutable_train_state()->add_stage(stages[i]);
+  }
 
   // If the gpus flag is not provided, allow the mode and device to be set
   // in the solver prototxt.
@@ -308,16 +304,34 @@ int train() {
     CopyLayers(solver.get(), FLAGS_weights);
   }
 
-#ifdef USE_MLSL
-  if (MLSL::GetNumNodes() > 1) {
+  if (FLAGS_param_server != "") {
     LOG(INFO) << "Configuring multinode setup";
-    caffe::MlslSync<float> sync(solver);
-    LOG(INFO) << "Starting Multi-node Optimization in MLSL environment";
-    sync.run();
-  } else
+
+#ifdef USE_MLSL
+      if (FLAGS_param_server != "mlsl") {
+#else
+      if (FLAGS_param_server != "mpi") {
 #endif /* USE_MLSL */
 
-  if (gpus.size() > 1) {
+        LOG(ERROR) << "currently unsupported";
+        return 1;
+      }
+
+#ifdef USE_MLSL
+      if (FLAGS_param_server == "mlsl") {
+        caffe::MlslSync<float> sync(solver);
+        LOG(INFO) << "Starting Multi-node Optimization in MLSL environment";
+        sync.run();
+      }
+#else /* !USE_MLSL */
+      if (FLAGS_param_server == "mpi") {
+        caffe::SynchronousNode<float> sync(solver, FLAGS_comm_threads);
+        LOG(INFO) << "Starting Multi-node Optimization in mpi environment";
+        sync.run();
+      }
+#endif /* USE_MLSL */
+
+  } else if (gpus.size() > 1) {
     caffe::P2PSync<float> sync(solver, NULL, solver->param());
     sync.Run(gpus);
   } else {
@@ -329,104 +343,43 @@ int train() {
 }
 RegisterBrewFunction(train);
 
-int test_detection(Net<float>& caffe_net) {
-  std::map<int, std::map<int,
-    std::vector<std::pair<float, int> > > > all_true_pos;
-  std::map<int, std::map<int,
-    std::vector<std::pair<float, int> > > > all_false_pos;
-  std::map<int, std::map<int, int> > all_num_pos;
+int data_server() {
+  CHECK_GT(FLAGS_solver.size(), 0) << "Need a solver definition to train.";
+  CHECK(!FLAGS_snapshot.size() || !FLAGS_weights.size())
+      << "Give a snapshot to resume training or weights to finetune "
+      "but not both.";
 
-  PERFORMANCE_INIT_MONITOR();
+  caffe::SolverParameter solver_param;
+  caffe::ReadSolverParamsFromTextFileOrDie(FLAGS_solver, &solver_param);
 
-  for (int i = 0; i < FLAGS_iterations; ++i) {
-    float iter_loss;
-    const vector<Blob<float>*>& result = caffe_net.Forward(&iter_loss);
+  caffe::SignalHandler signal_handler(
+        GetRequestedAction(FLAGS_sigint_effect),
+        GetRequestedAction(FLAGS_sighup_effect));
 
-    for (int j = 0; j < result.size(); ++j) {
-      const float* result_vec = result[j]->cpu_data();
+  shared_ptr<caffe::Solver<float> >
+      solver(caffe::SolverRegistry<float>::CreateSolver(solver_param));
 
-      int num_det = result[j]->height();
-      for (int k = 0; k < num_det; ++k) {
-        int item_id = static_cast<int>(result_vec[k * 5]);
-        int label = static_cast<int>(result_vec[k * 5 + 1]);
-        if (item_id == -1) {
-          // Special row of storing number of positives for a label.
-          if (all_num_pos[j].find(label) == all_num_pos[j].end()) {
-            all_num_pos[j][label] = static_cast<int>(result_vec[k * 5 + 2]);
-          } else {
-            all_num_pos[j][label] += static_cast<int>(result_vec[k * 5 + 2]);
-          }
-        } else {
-          // Normal row storing detection status.
-          float score = result_vec[k * 5 + 2];
-          int tp = static_cast<int>(result_vec[k * 5 + 3]);
-          int fp = static_cast<int>(result_vec[k * 5 + 4]);
-          if (tp == 0 && fp == 0) {
-            // Ignore such case. It happens when a detection bbox is matched to
-            // a difficult gt bbox and we don't evaluate on difficult gt bbox.
-            continue;
-          }
-          all_true_pos[j][label].push_back(std::make_pair(score, tp));
-          all_false_pos[j][label].push_back(std::make_pair(score, fp));
-        }
-      }
-    }
+  solver->SetActionFunction(signal_handler.GetActionFunction());
+
+  if (FLAGS_snapshot.size()) {
+    LOG(INFO) << "Resuming from " << FLAGS_snapshot;
+    solver->Restore(FLAGS_snapshot.c_str());
+  } else if (FLAGS_weights.size()) {
+    CopyLayers(solver.get(), FLAGS_weights);
   }
-
-  for (int i = 0; i < all_true_pos.size(); ++i) {
-    if (all_true_pos.find(i) == all_true_pos.end()) {
-      LOG(FATAL) << "Missing output_blob true_pos: " << i;
-    }
-    const std::map<int, std::vector<std::pair<float, int> > >& true_pos =
-        all_true_pos.find(i)->second;
-    if (all_false_pos.find(i) == all_false_pos.end()) {
-      LOG(FATAL) << "Missing output_blob false_pos: " << i;
-    }
-    const std::map<int, std::vector<std::pair<float, int> > >& false_pos =
-        all_false_pos.find(i)->second;
-    if (all_num_pos.find(i) == all_num_pos.end()) {
-      LOG(FATAL) << "Missing output_blob num_pos: " << i;
-    }
-    const std::map<int, int>& num_pos = all_num_pos.find(i)->second;
-    std::map<int, float> APs;
-    float mAP = 0.;
-    // Sort true_pos and false_pos with descend scores.
-    for (std::map<int, int>::const_iterator it = num_pos.begin();
-         it != num_pos.end(); ++it) {
-      int label = it->first;
-      int label_num_pos = it->second;
-      if (true_pos.find(label) == true_pos.end()) {
-        LOG(WARNING) << "Missing true_pos for label: " << label;
-        continue;
-      }
-      const std::vector<std::pair<float, int> >& label_true_pos =
-          true_pos.find(label)->second;
-      if (false_pos.find(label) == false_pos.end()) {
-        LOG(WARNING) << "Missing false_pos for label: " << label;
-        continue;
-      }
-      const std::vector<std::pair<float, int> >& label_false_pos =
-          false_pos.find(label)->second;
-      std::vector<float> prec, rec;
-      caffe::ComputeAP(label_true_pos, label_num_pos, label_false_pos,
-                "11point", &prec, &rec, &(APs[label]));
-      mAP += APs[label];
-    }
-    mAP /= num_pos.size();
-    const int output_blob_index = caffe_net.output_blob_indices()[i];
-    const string& output_name = caffe_net.blob_names()[output_blob_index];
-    LOG(INFO) << "    Test net output #" << i << ": " << output_name << " = "
-              << mAP;
-  }
-
+  LOG(INFO) << "Starting Data Server";
+  caffe::DataServer<float> server(
+    solver, FLAGS_listen_address, FLAGS_param_server, FLAGS_comm_threads);
+  server.run();
   return 0;
 }
+RegisterBrewFunction(data_server);
 
 // Test: score a model.
 int test() {
   CHECK_GT(FLAGS_model.size(), 0) << "Need a model definition to score.";
   CHECK_GT(FLAGS_weights.size(), 0) << "Need model weights to score.";
-  vector<string> stages = get_stages_from_flags(FLAGS_stage);
+  vector<string> stages = get_stages_from_flags();
 
   // Set device id and mode
   vector<int> gpus;
@@ -449,11 +402,6 @@ int test() {
                        FLAGS_engine);
   caffe_net.CopyTrainedLayersFrom(FLAGS_weights);
   LOG(INFO) << "Running for " << FLAGS_iterations << " iterations.";
-
-  if (FLAGS_detection) {
-    test_detection(caffe_net);
-    return 0;
-  }
 
   vector<int> test_score_output_id;
   vector<float> test_score;
@@ -505,7 +453,7 @@ RegisterBrewFunction(test);
 int time() {
   CHECK_GT(FLAGS_model.size(), 0) << "Need a model definition to time.";
   caffe::Phase phase = get_phase_from_flags(caffe::TRAIN);
-  vector<string> stages = get_stages_from_flags(FLAGS_stage);
+  vector<string> stages = get_stages_from_flags();
 
   // Set device id and mode
   vector<int> gpus;
@@ -609,23 +557,19 @@ RegisterBrewFunction(time);
 #include <stdio.h>
 typedef float real_t;
 
-void getFileName(char *file_name, bool is_target, const char *name, int id) {
-  snprintf(file_name, FILENAME_MAX, "%s%s%04i.bin",
-    is_target ? "TGT" : "REF", name, id);
+void getFileName(char *file_name, bool use_gpu, const char *name, int id) {
+  const char *prefix = use_gpu ? "GPU" : "CPU";
+  snprintf(file_name, FILENAME_MAX, "%s%s%04i.bin", prefix, name, id);
 }
 
-void getBinFilePath(char *file_path, const char *name) {
-  snprintf(file_path, FILENAME_MAX, "%s/%s", FLAGS_collect_dir.c_str(), name);
-}
-
-bool saveToFile(const string &file_path, bool is_target, const char *prefix,
-    int id, const real_t *data, unsigned count) {
+bool saveToFile(bool use_gpu, const char *name, int id,
+    const real_t *data, unsigned count) {
   char file_name[FILENAME_MAX];
-  getFileName(file_name, is_target, prefix, id);
+  getFileName(file_name, use_gpu, name, id);
 
-  FILE *file = fopen((file_path + "/" + file_name).c_str(), "w+b");
+  FILE *file = fopen(file_name, "w+b");
   if (!file) {
-    LOG(ERROR) << "Failed to create file '" << file_path << "'.";
+    LOG(ERROR) << "Failed to create file '" << file_name << "'.";
     return false;
   }
 
@@ -634,17 +578,21 @@ bool saveToFile(const string &file_path, bool is_target, const char *prefix,
   fclose(file);
 
   if (bytesWritten != bytesToWrite) {
-    LOG(ERROR) << "Failed to write data to '" << file_path << "' file.";
+    LOG(ERROR) << "Failed to write data to '" << file_name << "' file.";
     return false;
   }
 
   return true;
 }
 
-bool loadFromFile(const char *file_path, real_t *data, unsigned count) {
-  FILE *file = fopen(file_path, "rb");
+bool loadFromFile(bool use_gpu, const char *name, int id,
+    real_t *data, unsigned count) {
+  char file_name[FILENAME_MAX];
+  getFileName(file_name, use_gpu, name, id);
+
+  FILE *file = fopen(file_name, "rb");
   if (!file) {
-    LOG(ERROR) << "Failed to open file '" << file_path << "' for read.";
+    LOG(ERROR) << "Failed to open file '" << file_name << "' for read.";
     return false;
   }
 
@@ -653,7 +601,7 @@ bool loadFromFile(const char *file_path, real_t *data, unsigned count) {
   fclose(file);
 
   if (bytesRead != bytesToRead) {
-    LOG(ERROR) << "Failed to read data from '" << file_path << "' file.";
+    LOG(ERROR) << "Failed to read data from '" << file_name << "' file.";
     return false;
   }
 
@@ -687,16 +635,7 @@ int collect() {
   const vector<vector<bool> >& bottom_need_backward =
     caffe_net.bottom_need_backward();
 
-  boost::filesystem::path dir(FLAGS_collect_dir);
-  if (!boost::filesystem::exists(dir)) {
-    if (!boost::filesystem::create_directory(dir)) {
-      LOG(ERROR) << "Could not create directory for collection output files";
-    }
-  }
-
-  FILE *infoFile = fopen(use_gpu ?
-    (FLAGS_collect_dir + "/" + "GPUInfo.txt").c_str() :
-    (FLAGS_collect_dir + "/" + "CPUInfo.txt").c_str(), "w+t");
+  FILE *infoFile = fopen(use_gpu ? "GPUInfo.txt" : "CPUInfo.txt", "w+t");
   LOG(INFO) << "*** Collect procedure begins ***";
 
   for (int i = 0; i < params.size(); i++) {
@@ -706,27 +645,27 @@ int collect() {
 
   for (int i = 0; i < layers.size(); ++i) {
     LOG(INFO) << "Collecting FW Layer[" << i << "]: " << layers[i]->type();
-    fprintf(infoFile, "Fwrd%04i %s\n", i, layers[i]->type());
+    fprintf(infoFile, "Fwrd%04i: %s\n", i, layers[i]->type());
     layers[i]->Forward(bottom_vecs[i], top_vecs[i]);
-    saveToFile(FLAGS_collect_dir, false, "Fwrd", i, top_vecs[i][0]->cpu_data(),
-      top_vecs[i][0]->count());
+    saveToFile(use_gpu, "Fwrd", i,
+      top_vecs[i][0]->cpu_data(), top_vecs[i][0]->count());
   }
 
   for (int i = layers.size() - 1; i >= 0; --i) {
     LOG(INFO) << "Collecting BW Layer[" << i << "]: " << layers[i]->type();
-    fprintf(infoFile, "Bwrd%04i %s\n", i, layers[i]->type());
+    fprintf(infoFile, "Bwrd%04i: %s\n", i, layers[i]->type());
     layers[i]->Backward(top_vecs[i], bottom_need_backward[i], bottom_vecs[i]);
-    if (bottom_need_backward[i].size() > 0 && bottom_need_backward[i][0]) {
-      saveToFile(FLAGS_collect_dir, false, "Bwrd", i,
+    if (bottom_need_backward[i][0]) {
+      saveToFile(use_gpu, "Bwrd", i,
         bottom_vecs[i][0]->cpu_diff(), bottom_vecs[i][0]->count());
     }
   }
 
   LOG(INFO) << "Collecting gradients and weights";
   for (int i = 0; i < params.size(); i++) {
-    saveToFile(FLAGS_collect_dir, false, "Grad", i,
+    saveToFile(use_gpu, "Grad", i,
       params[i]->cpu_diff(), params[i]->count());
-    saveToFile(FLAGS_collect_dir, false, "Wght", i,
+    saveToFile(use_gpu, "Wght", i,
       params[i]->cpu_data(), params[i]->count());
   }
 
@@ -735,8 +674,6 @@ int collect() {
   return 0;
 }
 RegisterBrewFunction(collect);
-
-#include "caffe/util/compareToolUtilities.h"
 
 int compare() {
   #ifndef DETERMINISTIC
@@ -765,16 +702,7 @@ int compare() {
   const vector<vector<bool> >& bottom_need_backward =
     caffe_net.bottom_need_backward();
 
-  boost::filesystem::path dir(FLAGS_compare_output_dir);
-  if (!boost::filesystem::exists(dir)) {
-    if (!boost::filesystem::create_directory(dir)) {
-      LOG(ERROR) << "Could not create directory for compare output files";
-    }
-  }
-
-  FILE *infoFile = fopen(use_gpu ?
-    (FLAGS_compare_output_dir + "/" + "GPUInfo.txt").c_str() :
-    (FLAGS_compare_output_dir + "/" + "CPUInfo.txt").c_str(), "w+t");
+  FILE *infoFile = fopen(use_gpu ? "GPUInfo.txt" : "CPUInfo.txt", "w+t");
   LOG(INFO) << "*** Compare procedure begins ***";
 
   for (int i = 0; i < params.size(); i++) {
@@ -784,72 +712,49 @@ int compare() {
 
   for (int i = 0; i < layers.size(); ++i) {
     LOG(INFO) << "Collecting FW Layer[" << i << "]: " << layers[i]->type();
-    fprintf(infoFile, "Fwrd%04i %s\n", i, layers[i]->type());
+    fprintf(infoFile, "Fwrd%04i: %s\n", i, layers[i]->type());
     layers[i]->Forward(bottom_vecs[i], top_vecs[i]);
-    saveToFile(FLAGS_compare_output_dir, true, "Fwrd", i,
+    saveToFile(use_gpu, "Fwrd", i,
       top_vecs[i][0]->cpu_data(), top_vecs[i][0]->count());
-    char file_name[FILENAME_MAX];
-    char file_path[FILENAME_MAX];
-    getFileName(file_name, false, "Fwrd", i);
-    getBinFilePath(file_path, file_name);
-    loadFromFile(file_path, top_vecs[i][0]->mutable_cpu_data(),
-      top_vecs[i][0]->count());
-    if (top_vecs[i][0]->get_prv_data_descriptor().get()) {
-        top_vecs[i][0]->mutable_prv_data();
-    }
+    loadFromFile(!use_gpu, "Fwrd", i,
+      top_vecs[i][0]->mutable_cpu_data(), top_vecs[i][0]->count());
   }
 
   for (int i = layers.size() - 1; i >= 0; --i) {
     LOG(INFO) << "Collecting BW Layer[" << i << "]: " << layers[i]->type();
-    fprintf(infoFile, "Bwrd%04i %s\n", i, layers[i]->type());
+    fprintf(infoFile, "Bwrd%04i: %s\n", i, layers[i]->type());
     layers[i]->Backward(top_vecs[i], bottom_need_backward[i], bottom_vecs[i]);
-    if (bottom_need_backward[i].size() > 0 && bottom_need_backward[i][0]) {
-      saveToFile(FLAGS_compare_output_dir, true, "Bwrd", i,
+    if (bottom_need_backward[i][0]) {
+      saveToFile(use_gpu, "Bwrd", i,
         bottom_vecs[i][0]->cpu_diff(), bottom_vecs[i][0]->count());
-      char file_name[FILENAME_MAX];
-      char file_path[FILENAME_MAX];
-      getFileName(file_name, false, "Bwrd", i);
-      getBinFilePath(file_path, file_name);
-      loadFromFile(file_path, bottom_vecs[i][0]->mutable_cpu_diff(),
-        bottom_vecs[i][0]->count());
-      if (bottom_vecs[i][0]->get_prv_diff_descriptor().get()) {
-          bottom_vecs[i][0]->mutable_prv_diff();
-      }
+      loadFromFile(!use_gpu, "Bwrd", i,
+        bottom_vecs[i][0]->mutable_cpu_diff(), bottom_vecs[i][0]->count());
     }
   }
 
   LOG(INFO) << "Collecting gradients and weights";
   for (int i = 0; i < params.size(); i++) {
-    char file_name[FILENAME_MAX];
-    getFileName(file_name, true, "Grad", i);
-    saveToFile(FLAGS_compare_output_dir, true, "Grad", i,
+    saveToFile(use_gpu, "Grad", i,
       params[i]->cpu_diff(), params[i]->count());
-    getFileName(file_name, true, "Wght", i);
-    saveToFile(FLAGS_compare_output_dir, true, "Wght", i,
+    saveToFile(use_gpu, "Wght", i,
       params[i]->cpu_data(), params[i]->count());
   }
 
+  LOG(INFO) << "*** Compare procedure ends ***";
   fclose(infoFile);
-
-  std::unordered_map<string, int> errorsDictionary;
-  string infoPath = FLAGS_compare_output_dir + "/" + "CPUInfo.txt";
-  proceedWithCompare(infoPath, &errorsDictionary);
-
-  if (errorsDictionary.size() > 0) {
-    LOG(INFO) << "Invalid layer behaviour detected on: ";
-    for (std::unordered_map<string, int>::iterator it =
-      errorsDictionary.begin(); it != errorsDictionary.end(); ++it) {
-      LOG(WARNING) << "\t" << it->first;
-    }
-  } else {
-    LOG(INFO) << "*** All layers are working correctly ***";
-  }
-
   return 0;
 }
 RegisterBrewFunction(compare);
 
+
 int main(int argc, char** argv) {
+
+#ifdef USE_MLSL
+  caffe::internode::mlsl_init(argc, argv);
+#else /* !USE_MLSL */
+  caffe::internode::mpi_init(argc, argv);
+#endif /* USE_MLSL */
+
   // Print output to stderr (while still logging).
   FLAGS_alsologtostderr = 1;
   // Set version
@@ -860,6 +765,7 @@ int main(int argc, char** argv) {
       "commands:\n"
       "  train           train or finetune a model\n"
       "  test            score a model\n"
+      "  data_server     run data server - remote data source\n"
       "  device_query    show GPU diagnostic information\n"
       "  time            benchmark model execution time\n"
       "  collect         collects layer data on specified device\n"
@@ -871,15 +777,36 @@ int main(int argc, char** argv) {
     try {
 #endif
       int ret = GetBrewFunction(caffe::string(argv[1]))();
+
+#ifdef USE_MLSL
+      caffe::internode::mlsl_finalize();
+#else /* !USE_MLSL */
+      caffe::internode::mpi_finalize();
+#endif /* USE_MLSL */
+
       return ret;
 #ifdef WITH_PYTHON_LAYER
     } catch (bp::error_already_set) {
       PyErr_Print();
+
+#ifdef USE_MLSL
+      caffe::internode::mlsl_finalize();
+#else /* USE_MLSL */
+      caffe::internode::mpi_finalize();
+#endif /* USE_MLSL */
+
       return 1;
     }
 #endif
   } else {
     gflags::ShowUsageWithFlagsRestrict(argv[0], "tools/caffe");
   }
+
+#ifdef USE_MLSL
+      caffe::internode::mlsl_finalize();
+#else /* !USE_MLSL */
+      caffe::internode::mpi_finalize();
+#endif /* USE_MLSL */
+
   return 0;
 }

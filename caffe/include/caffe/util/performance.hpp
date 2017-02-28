@@ -38,36 +38,29 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define PerformanceH
 
 #ifdef PERFORMANCE_MONITORING
-#define PERFORMANCE_MEASUREMENT_BEGIN()            \
-  performance::Measurement m_MACRO;                \
-  m_MACRO.Start();
+#define PERFORMANCE_MEASUREMENT_BEGIN()              \
+    performance::Measurement m_MACRO;                \
+    m_MACRO.Start();
 
-#define PERFORMANCE_MEASUREMENT_END(name)                        \
-  m_MACRO.Stop();                                                \
-  const char* n_MACRO = name;                                    \
-  int id_MACRO = performance::monitor.GetEventIdByName(n_MACRO); \
-  performance::monitor.UpdateEventById(id_MACRO, m_MACRO);
+#define PERFORMANCE_MEASUREMENT_END(name)                          \
+    m_MACRO.Stop();                                                \
+    const char* n_MACRO = name;                                    \
+    int id_MACRO = performance::monitor.GetEventIdByName(n_MACRO); \
+    performance::monitor.UpdateEventById(id_MACRO, m_MACRO);
 
-#define PERFORMANCE_MEASUREMENT_END_STATIC(name)                        \
-  m_MACRO.Stop();                                                       \
-  static const char* n_MACRO = name;                                    \
-  static int id_MACRO = performance::monitor.GetEventIdByName(n_MACRO); \
-  performance::monitor.UpdateEventById(id_MACRO, m_MACRO);
+#define PERFORMANCE_MEASUREMENT_END_STATIC(name)                          \
+    m_MACRO.Stop();                                                       \
+    static const char* n_MACRO = name;                                    \
+    static int id_MACRO = performance::monitor.GetEventIdByName(n_MACRO); \
+    performance::monitor.UpdateEventById(id_MACRO, m_MACRO);
 
 #define PERFORMANCE_CREATE_MONITOR() \
-  namespace performance {            \
-  Monitor monitor; };
+    namespace performance {          \
+    Monitor monitor; };              \
 
-#define PERFORMANCE_INIT_MONITOR()           \
-  performance::monitor.EnableMeasurements(); \
-  performance::monitor.MarkAsInitialized();
-
-#define PERFORMANCE_MKL_NAME_SFX(prefix, suffix)             \
-  (std::string(prefix) + "_mkl_" + this->layer_param_.name() \
-    + std::string(suffix)).c_str();
-
-#define PERFORMANCE_MKL_NAME(prefix) \
-  (std::string(prefix) + "_mkl_" + this->layer_param_.name()).c_str();
+#define PERFORMANCE_INIT_MONITOR()              \
+    performance::monitor.EnableMeasurements();  \
+    performance::monitor.MarkAsInitialized();
 
 #else
 #define PERFORMANCE_MEASUREMENT_BEGIN()
@@ -75,8 +68,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define PERFORMANCE_MEASUREMENT_END_STATIC(name)
 #define PERFORMANCE_CREATE_MONITOR()
 #define PERFORMANCE_INIT_MONITOR()
-#define PERFORMANCE_MKL_NAME_SFX(prefix, suffix)
-#define PERFORMANCE_MKL_NAME(prefix)
 #endif
 
 #ifdef PERFORMANCE_MONITORING
@@ -138,73 +129,35 @@ namespace performance {
     }
 
     static PreciseTime GetProcessTime() {
-      return GetTimeStamp(CLOCK_THREAD_CPUTIME_ID);
+      return GetTimeStamp(CLOCK_PROCESS_CPUTIME_ID);
     }
   };
 
   class Measurement {
-    PreciseTime process_accumulator_;
     PreciseTime process_time_stamp_;
-    PreciseTime monotonic_accumulator_;
     PreciseTime monotonic_time_stamp_;
-    Measurement* next_;
-
-    static Measurement*& GetStack() {
-      static Measurement* stack = NULL;
-      return stack;
-    }
-
-    void Suspend() {
-      process_accumulator_ = PreciseTime::GetProcessTime()
-        - process_time_stamp_;
-      monotonic_accumulator_ = PreciseTime::GetMonotonicTime()
-        - monotonic_time_stamp_;
-    }
-
-    void Resume() {
-      monotonic_time_stamp_ = PreciseTime::GetMonotonicTime();
-      process_time_stamp_ = PreciseTime::GetProcessTime();
-    }
 
    public:
     Measurement() {
     }
 
     void Start() {
-      static Measurement*& stack = GetStack();
-
-      if (stack)
-          stack->Suspend();
-
-      next_ = stack;
-      stack = this;
-
-      monotonic_accumulator_ = 0;
-      process_accumulator_ = 0;
       monotonic_time_stamp_ = PreciseTime::GetMonotonicTime();
       process_time_stamp_ = PreciseTime::GetProcessTime();
     }
 
     void Stop() {
-      process_accumulator_ = PreciseTime::GetProcessTime()
-        - process_time_stamp_;
-      monotonic_accumulator_ = PreciseTime::GetMonotonicTime()
-        - monotonic_time_stamp_;
-
-      static Measurement*& stack = GetStack();
-
-      stack = next_;
-
-      if (stack)
-          stack->Resume();
+      process_time_stamp_ = PreciseTime::GetProcessTime() - process_time_stamp_;
+      monotonic_time_stamp_ = PreciseTime::GetMonotonicTime() -
+        monotonic_time_stamp_;
     }
 
     const PreciseTime &GetProcessTimeStamp() const {
-      return process_accumulator_;
+      return process_time_stamp_;
     }
 
     const PreciseTime &GetMonotonicTimeStamp() const {
-      return monotonic_accumulator_;
+      return monotonic_time_stamp_;
     }
   };
 
@@ -294,66 +247,44 @@ namespace performance {
       printf("\n");
     }
 
-    static void WriteLine(const char* string) {
-      printf("%31s\n", string);
-    }
-
     static void WriteHeaders() {
-      printf("%10s %16s %16s %16s %16s %16s %16s : %s\n\n",
-        "Calls",
-        "Avg(total)", "Min(total)", "Max(total)",
+      printf("\n%52s %18s %18s %18s %18s %18s %18s\n\n",
         "Avg(proc)", "Min(proc)", "Max(proc)",
-        "Layer");
+        "Avg(total)", "Min(total)", "Max(total)", "Calls");
     }
 
-    static void WriteNoSpacing(const char* string, const PreciseTime& time) {
-      printf("%18lu : %s\n", (uint64_t)time, string);
-    }
-
-    static void Write(const char* string, const PreciseTime& time) {
-      printf("%18lu %10c %s\n", (uint64_t)time, ':', string);
-    }
-
-    static void Write(const char* string, const PreciseTime& time,
-      double percentage) {
-      printf("%18lu %6.2f %% : %s\n", (uint64_t)time, percentage, string);
+    static void Write(const char *string, const PreciseTime &time) {
+      printf("%31s : %lu [nsec]\n", string, (uint64_t)time);
     }
 
     static void Write(const char *string, const Event &event) {
-      printf("%10lu %16lu %16lu %16lu %16lu %16lu %16lu : %s \n",
-          (uint64_t)event.GetNumberOfCalls(),
-          (uint64_t)event.GetAverageMonotonicTime(),
-          (uint64_t)event.GetMinimalMonotonicTime(),
-          (uint64_t)event.GetMaximalMonotonicTime(),
+      printf("%31s : %18lu %18lu %18lu %18lu %18lu %18lu %18lu\n", string,
           (uint64_t)event.GetAverageProcessTime(),
           (uint64_t)event.GetMinimalProcessTime(),
           (uint64_t)event.GetMaximalProcessTime(),
-          string);
+          (uint64_t)event.GetAverageMonotonicTime(),
+          (uint64_t)event.GetMinimalMonotonicTime(),
+          (uint64_t)event.GetMaximalMonotonicTime(),
+          (uint64_t)event.GetNumberOfCalls());
     }
   };
 
   class Monitor {
-    typedef std::vector<std::string> NameVector;
-    typedef std::vector<Event> EventVector;
+    typedef std::vector<Event> Vector;
     typedef std::pair<std::string, unsigned> Pair;
     typedef std::map<std::string, unsigned> Map;
     typedef Map::iterator Iterator;
     typedef std::pair<Iterator, bool> Status;
 
-    EventVector events_;
+    Vector events_;
     Map event_name_id_map_;
 
     bool are_measurements_enabled_;
 
-    NameVector event_names_;
-    PreciseTime total_non_mkl_time_;
-    PreciseTime total_mkl_time_;
-    PreciseTime total_mkl_conversions_time_;
-    PreciseTime total_data_layer_time_;
-    PreciseTime total_weights_update_time_;
     PreciseTime total_monotonic_time_;
-    PreciseTime total_init_time_;
     PreciseTime total_process_time_;
+    PreciseTime total_events_time_;
+    PreciseTime total_init_time_;
 
     void DumpStatistics() {
       if (events_.size())
@@ -363,132 +294,54 @@ namespace performance {
     }
 
     void DumpEventsLog() {
-      ObtainEventNames();
-      ObtainTotalMklConversionTime();
-      ObtainTotalWeightsUpdateTime();
-      ObtainTotalDataLayerTime();
-      ObtainTotalMklTime();
+      ObtainTotalEventsTime();
 
-      Log::WriteLine();
-      Log::WriteLine("Detailed event information");
-      Log::WriteLine();
       Log::WriteHeaders();
+
       DumpDetailedEventInformation();
     }
 
     void DumpGeneralLog() {
       Log::WriteLine();
-      Log::WriteLine();
-      Log::WriteLine("Total event execution time");
-      Log::WriteLine();
+
       DumpEventTimings();
 
       Log::WriteLine();
-      Log::WriteLine();
-      Log::WriteLine("Summarized information");
-      Log::WriteLine();
+
       DumpGeneralTimings();
 
       Log::WriteLine();
     }
 
     void DumpGeneralTimings() {
-      const PreciseTime framework_time = total_process_time_ -
-        total_non_mkl_time_ - total_mkl_time_ -
-        total_mkl_conversions_time_ - total_data_layer_time_ -
-        total_weights_update_time_ - total_init_time_;
-      const PreciseTime system_time = total_monotonic_time_ -
-        total_process_time_;
-
-      Log::Write("Data layer", total_data_layer_time_,
-        GetTimePercentage(total_data_layer_time_));
-      Log::Write("Weight update", total_weights_update_time_,
-        GetTimePercentage(total_weights_update_time_));
-      Log::Write("Non-MKL events", total_non_mkl_time_,
-        GetTimePercentage(total_non_mkl_time_));
-      Log::Write("MKL conversions", total_mkl_conversions_time_,
-        GetTimePercentage(total_mkl_conversions_time_));
-      Log::Write("MKL events", total_mkl_time_,
-        GetTimePercentage(total_mkl_time_));
-      Log::Write("Framework", framework_time,
-        GetTimePercentage(framework_time));
-      Log::Write("System", system_time, GetTimePercentage(system_time));
       Log::Write("Initialization", total_init_time_);
+      Log::Write("Framework", total_process_time_ -
+        total_events_time_ - total_init_time_);
+      Log::Write("System", total_monotonic_time_ - total_process_time_);
       Log::Write("Process", total_process_time_);
+      Log::Write("All events", total_events_time_);
       Log::Write("Total", total_monotonic_time_);
     }
 
     void DumpEventTimings() {
-      for (unsigned i = 0; i < events_.size(); i++) {
-        Log::WriteNoSpacing(event_names_[i].c_str(),
-          events_[i].GetTotalProcessTime());
-      }
+      Iterator iterator = event_name_id_map_.begin();
+      for (; iterator != event_name_id_map_.end(); iterator++)
+        Log::Write(iterator->first.c_str(),
+          events_[iterator->second].GetTotalProcessTime());
     }
 
     void DumpDetailedEventInformation() {
-      for (unsigned i = 0; i < events_.size(); i++) {
-        Log::Write(event_names_[i].c_str(), events_[i]);
-      }
-    }
-
-    void ObtainTotalMklTime() {
-      total_non_mkl_time_ = 0;
-      total_mkl_time_ = 0;
-
-      Iterator iterator = event_name_id_map_.begin();
-      for (; iterator != event_name_id_map_.end(); iterator++) {
-        if (iterator->first.find("mkl") != std::string::npos)
-          total_mkl_time_ = total_mkl_time_ +
-            events_[iterator->second].GetTotalProcessTime();
-        else
-          total_non_mkl_time_ = total_non_mkl_time_ +
-            events_[iterator->second].GetTotalProcessTime();
-      }
-      total_non_mkl_time_ = total_non_mkl_time_ -
-        total_weights_update_time_ - total_data_layer_time_;
-      total_mkl_time_ = total_mkl_time_ - total_mkl_conversions_time_;
-    }
-
-    void ObtainTotalMklConversionTime() {
-      if (event_name_id_map_.count("mkl_conversion") > 0) {
-        unsigned mkl_conv_id = event_name_id_map_["mkl_conversion"];
-        total_mkl_conversions_time_ =
-          events_[mkl_conv_id].GetTotalProcessTime();
-      } else {
-        total_mkl_conversions_time_ = 0;
-      }
-    }
-
-    void ObtainTotalDataLayerTime() {
-      for (unsigned i = 0; i < event_names_.size(); i++) {
-        if (event_names_[i].find("W_") != std::string::npos) {
-          total_data_layer_time_ = events_[i].GetTotalProcessTime();
-          break;
-        }
-      }
-    }
-
-    void ObtainTotalWeightsUpdateTime() {
-      if (event_name_id_map_.count("weights_update") > 0) {
-        unsigned weights_update_id = event_name_id_map_["weights_update"];
-        total_weights_update_time_ =
-          events_[weights_update_id].GetTotalProcessTime();
-      } else {
-        total_weights_update_time_ = 0;
-      }
-    }
-
-    void ObtainEventNames() {
-      event_names_.resize(event_name_id_map_.size());
-
       Iterator iterator = event_name_id_map_.begin();
       for (; iterator != event_name_id_map_.end(); iterator++)
-        event_names_[iterator->second] = iterator->first;
+        Log::Write(iterator->first.c_str(), events_[iterator->second]);
     }
 
-    double GetTimePercentage(const PreciseTime& time) {
-      return (100.0 * static_cast<double>(time)) /
-        static_cast<double>(total_monotonic_time_ - total_init_time_);
+    void ObtainTotalEventsTime() {
+      total_events_time_ = 0;
+      Iterator iterator = event_name_id_map_.begin();
+      for (; iterator != event_name_id_map_.end(); iterator++)
+        total_events_time_ = total_events_time_ +
+          events_[iterator->second].GetTotalProcessTime();
     }
 
    public:
@@ -499,6 +352,7 @@ namespace performance {
 
       total_monotonic_time_ = PreciseTime::GetMonotonicTime();
       total_process_time_ = PreciseTime::GetProcessTime();
+      total_events_time_ = 0;
       total_init_time_ = 0;
     }
 

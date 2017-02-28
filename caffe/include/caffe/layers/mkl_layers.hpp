@@ -63,8 +63,6 @@ class MKLConvolutionLayer : public ConvolutionLayer<Dtype> {
 
   virtual ~MKLConvolutionLayer();
 
-  virtual inline const char* type() const { return "MklConvolution"; }
-
  protected:
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
                            const vector<Blob<Dtype>*>& top);

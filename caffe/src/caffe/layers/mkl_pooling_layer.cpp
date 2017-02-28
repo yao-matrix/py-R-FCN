@@ -402,7 +402,7 @@ void MKLPoolingLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
   }
   PERFORMANCE_MEASUREMENT_BEGIN();
   status = dnnExecute<Dtype>(poolingFwd, pooling_res);
-  PERFORMANCE_MEASUREMENT_END(PERFORMANCE_MKL_NAME("FW"));
+  PERFORMANCE_MEASUREMENT_END_STATIC("FW_mkl_pooling");
 
 #if DUMP_LAYER_IO
   if (1) {
@@ -492,7 +492,7 @@ void MKLPoolingLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
 
   PERFORMANCE_MEASUREMENT_BEGIN();
   e = dnnExecute<Dtype>(poolingBwd, pooling_res);
-  PERFORMANCE_MEASUREMENT_END(PERFORMANCE_MKL_NAME("BW"));
+  PERFORMANCE_MEASUREMENT_END_STATIC("BW_mkl_pooling");
 
 #if DUMP_LAYER_IO
   if (1) {

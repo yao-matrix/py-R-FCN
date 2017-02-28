@@ -250,7 +250,7 @@ ifneq ($(CPU_ONLY), 1)
 	LIBRARIES := cudart cublas curand
 endif
 
-LIBRARIES += glog gflags protobuf boost_system boost_filesystem boost_regex m hdf5_hl hdf5
+LIBRARIES += glog gflags protobuf boost_system boost_filesystem m hdf5_hl hdf5
 
 # handle IO dependencies
 USE_LEVELDB ?= 1
@@ -267,7 +267,7 @@ ifeq ($(USE_OPENCV), 1)
 	LIBRARIES += opencv_core opencv_highgui opencv_imgproc 
 
 	ifeq ($(OPENCV_VERSION), 3)
-		LIBRARIES += opencv_imgcodecs opencv_videoio
+		LIBRARIES += opencv_imgcodecs
 	endif
 
 endif
@@ -629,6 +629,15 @@ ifeq ($(USE_OPENMP), 1)
       LIBRARY_DIRS += $(INTEL_OMP_DIR)
     endif
   endif
+endif
+
+# MPI support
+ifeq ($(USE_MPI), 1)
+  COMMON_FLAGS += -DUSE_MPI
+ #ifneq (,$(findstring mpi,$(CXX)))
+ #  CXXFLAGS += -mt_mpi
+ #  LINKFLAGS += -mt_mpi
+ #endif
 endif
 
 # set_env should be at the end
