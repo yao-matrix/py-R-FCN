@@ -269,6 +269,7 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
         !layer_param.type().compare("ImageData")  ||
         !layer_param.type().compare("HDF5Data")   ||
         !layer_param.type().compare("MemoryData") ||
+        !layer_param.type().compare("Input") ||
         !layer_param.type().compare("WindowData")) {
 
         // FIXME: retrieve batch_size from top[0]->shape[0] when MLSL stuff will be moved from LayerSetUp
@@ -601,6 +602,7 @@ void Net<Dtype>::CompileNet(const NetParameter& param,
   NetParameter param_temp2;  // temporary compiled param
   param_temp2.CopyFrom(param_temp);
   param_temp2.clear_layer();   // Remove layers
+
   CompilationRuleTwo(param_temp, &param_temp2);
 
   param_compiled->CopyFrom(param_temp2);
@@ -697,6 +699,7 @@ void Net<Dtype>::CompilationRuleOne(const NetParameter& param,
   }
 }
 
+
 template <typename Dtype>
 void Net<Dtype>::CompilationRuleTwo(const NetParameter& param,
                                     NetParameter* param_compiled) {
@@ -713,12 +716,17 @@ void Net<Dtype>::CompilationRuleTwo(const NetParameter& param,
     // and rename Convolution top blob after deleted ReLU's top
 
     // If current layer is Convolution of MKLDNN engine..
+    // but requested subengine should not have DLA subengine
     if ((layer_param->type().compare("Convolution") == 0) &&
        ((layer_param->convolution_param().engine() ==
          ConvolutionParameter_Engine_MKLDNN)
        || ((layer_param->convolution_param().engine() ==
            ConvolutionParameter_Engine_DEFAULT) &&
-            param.engine().compare("MKLDNN") == 0))) {
+            ((param.engine().compare(0, 6, "MKLDNN") == 0
+            && param.engine().find(":DLA", 6) == string::npos)) ||
+            ((param.engine() == "" &&
+              layer_param->engine().compare(0, 6, "MKLDNN") == 0 &&
+              layer_param->engine().find(":DLA", 6) == string::npos))))) {
       std::vector<const LayerParameter*> consumer_layer_params;
       GetBlobConsumers(consumer_layer_params, layer_param->top(0),
                        param, i+1 < param.layer_size() ? i+1 : i);
@@ -733,7 +741,11 @@ void Net<Dtype>::CompilationRuleTwo(const NetParameter& param,
           ReLUParameter_Engine_MKLDNN)
         || ((consumer_layer_param.relu_param().engine() ==
             ReLUParameter_Engine_DEFAULT) &&
-             param.engine().compare("MKLDNN") == 0))) {
+            ((param.engine().compare(0, 6, "MKLDNN") == 0
+            && param.engine().find(":DLA", 6) == string::npos)) ||
+            ((param.engine() == "" &&
+              layer_param->engine().compare(0, 6, "MKLDNN") == 0 &&
+              layer_param->engine().find(":DLA", 6) == string::npos))))) {
         string& convolution_top_blob_name =
             const_cast<string&>(layer_param->top(0));
         const string& scale_top_blob_name = consumer_layer_param.top(0);
@@ -1050,7 +1062,7 @@ void Net<Dtype>::AppendParam(const NetParameter& param, const int layer_id,
     }
     const int learnable_param_id = learnable_params_.size();
     if (!params_[net_param_id].get()) {
-	LOG(FATAL) << "layer: " << layer_names_[layer_id] << " param: " << param_name << " is NULL";
+	  LOG(FATAL) << "layer: " << layer_names_[layer_id] << " param: " << param_name << " is NULL";
     }
     learnable_params_.push_back(params_[net_param_id].get());
     learnable_param_ids_.push_back(learnable_param_id);
@@ -1132,6 +1144,7 @@ Dtype Net<Dtype>::ForwardFromTo(int start, int end) {
   
   Dtype loss = 0;
   for (int i = start; i <= end; ++i) {
+    PERFORMANCE_MEASUREMENT_BEGIN();
     if (time_info_ && iter_cnt >= 1) {
         forward_iter_timer.Start();
         // LOG(ERROR) << "Forwarding " << layer_names_[i] << " start";

@@ -170,17 +170,10 @@ void caffe_cpu_copy(const int N, const Dtype* X, Dtype* Y) {
   static const int threshold = omp_get_max_threads() *
                           caffe::cpu::OpenMpManager::getProcessorSpeedMHz() / 3;
   const bool run_parallel =
-#ifdef USE_MPI
-    (caffe::cpu::OpenMpManager::isMajorThread(boost::this_thread::get_id())) &&
-    (N >= threshold) &&
-    (omp_in_parallel() == 0) &&
-    (Caffe::mode() != Caffe::GPU);
-#else
     (N >= threshold) &&
     (omp_in_parallel() == 0) &&
     (Caffe::mode() != Caffe::GPU) &&
     (caffe::cpu::OpenMpManager::isMajorThread(boost::this_thread::get_id()));
-#endif
 
   if (run_parallel) {
     const int block_mem_size = 256*1024;
@@ -225,6 +218,7 @@ void caffe_copy(const int N, const Dtype* X, Dtype* Y) {
   }
 }
 
+template void caffe_copy<bool>(const int N, const bool* X, bool* Y);
 template void caffe_copy<int>(const int N, const int* X, int* Y);
 template void caffe_copy<unsigned int>(const int N, const unsigned int* X,
     unsigned int* Y);
