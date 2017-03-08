@@ -587,7 +587,8 @@ message ConcatParameter {
     MKL2017 = 3;
     MKLDNN = 4;
   }
-  optional Engine engine = 3 [default = DEFAULT];}
+  optional Engine engine = 3 [default = DEFAULT];
+}
 
 message BatchNormParameter {
   // If false, accumulate global mean/variance values via a moving average. If
