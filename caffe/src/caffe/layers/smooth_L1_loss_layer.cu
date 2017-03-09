@@ -1,6 +1,6 @@
 #include <vector>
 
-#include "caffe/layers/smooth_l1_loss_layer.hpp"
+#include "caffe/layers/smooth_L1_loss_layer.hpp"
 
 namespace caffe {
 

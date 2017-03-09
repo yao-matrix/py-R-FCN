@@ -102,6 +102,33 @@ private:
 };
 #endif // #ifdef FPGA_ENABLED
 
+#ifdef DLA_ENABLED
+// =====  Deep Learning Accelerator =======================================
+class DLAEngine
+{
+public:
+    static DLAEngine & Instance()
+    {
+        // I's thread-safe in C++11.
+        static DLAEngine myInstance;
+        return myInstance;
+    }
+    DLAEngine(DLAEngine const&) = delete;             // Copy construct
+    DLAEngine(DLAEngine&&) = delete;                  // Move construct
+    DLAEngine& operator=(DLAEngine const&) = delete;  // Copy assign
+    DLAEngine& operator=(DLAEngine &&) = delete;      // Move assign
+
+    engine & get_engine() { return _dla_engine; }
+protected:
+    DLAEngine() : _dla_engine(engine::dla, 0) {}
+    ~DLAEngine() {}
+private:
+    engine _dla_engine;
+};
+
+
+#endif // #ifdef DLA_ENABLED
+
 // =====  MKLDNNStream =======================================
 class MKLDNNStream {
 public:

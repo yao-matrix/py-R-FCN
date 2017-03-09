@@ -183,7 +183,8 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
     }
     // Setup layer.
     const LayerParameter& layer_param = param.layer(layer_id);
-	// LOG(ERROR) << "layer: " << layer_param.name() << " setup start";
+    // LOG(ERROR) << "layer: " << layer_param.name() << " setup start";
+#ifdef CPU_ONLY
     if (1) /*(param.engine() != "") */{
 	  // XXX: Matrix: force some convolution layers to CAFFE engine here to WR performance issue
 	  if (
@@ -203,12 +204,17 @@ void Net<Dtype>::Init(const NetParameter& in_param) {
           layer_param.type().compare("Pooling") &&
           layer_param.type().compare("Split"))
          ) {
-	     // LOG(ERROR) << layer_param.name() << " use CAFFE Engine";
-	     param.mutable_layer(layer_id)->set_engine("CAFFE");
+             // LOG(ERROR) << layer_param.name() << " use CAFFE Engine";
+             param.mutable_layer(layer_id)->set_engine("CAFFE");
 	  } else {
-         param.mutable_layer(layer_id)->set_engine("MKL2017");
+             param.mutable_layer(layer_id)->set_engine("MKL2017");
 	  }
 	}
+#else
+    if (param.engine() != "") {
+      param.mutable_layer(layer_id)->set_engine(param.engine());
+    }
+#endif
 
     if (layer_param.propagate_down_size() > 0) {
       CHECK_EQ(layer_param.propagate_down_size(),
@@ -1050,7 +1056,7 @@ void Net<Dtype>::AppendParam(const NetParameter& param, const int layer_id,
     }
     const int learnable_param_id = learnable_params_.size();
     if (!params_[net_param_id].get()) {
-	LOG(FATAL) << "layer: " << layer_names_[layer_id] << " param: " << param_name << " is NULL";
+      LOG(FATAL) << "layer: " << layer_names_[layer_id] << " param: " << param_name << " is NULL";
     }
     learnable_params_.push_back(params_[net_param_id].get());
     learnable_param_ids_.push_back(learnable_param_id);

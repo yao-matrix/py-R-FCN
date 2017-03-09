@@ -49,12 +49,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <algorithm>
 #include <fstream>  // NOLINT(readability/streams)
+#include <map>
 #include <string>
 #include <vector>
 
 #include "caffe/common.hpp"
-#include "caffe/internode/configuration.hpp"
-#include "caffe/multinode/SendCallback.hpp"
 #include "caffe/proto/caffe.pb.h"
 #include "caffe/util/io.hpp"
 

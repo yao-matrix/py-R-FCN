@@ -186,7 +186,7 @@ void MKLDNNMemoryDescriptor<Dtype, is_diff>::convert_from_extprv(shared_ptr<prim
         return;
     create_reorder_from_extprv(aprimitive);
     VLOG(1) << "--- MKLDNNMemoryDescriptorBase<Dtype>::convert_from_extprv --- " << this->name;
-    this->_reorder_extprv2prv.submit();;
+    this->_reorder_extprv2prv.submit();
 }
 
 
