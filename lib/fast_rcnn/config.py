@@ -35,13 +35,13 @@ __C.TRAIN = edict()
 
 # Scales to use during training (can list multiple scales)
 # Each scale is the pixel size of an image's shortest side
-__C.TRAIN.SCALES = (600,)
+__C.TRAIN.SCALES = (512,)
 
 # pickle or image
 __C.TRAIN.FORMAT = '' # 'pickle'
 
 # Max pixel size of the longest side of a scaled input image
-__C.TRAIN.MAX_SIZE = 1000
+__C.TRAIN.MAX_SIZE = 512
 
 # Images to use per minibatch
 __C.TRAIN.IMS_PER_BATCH = 2
