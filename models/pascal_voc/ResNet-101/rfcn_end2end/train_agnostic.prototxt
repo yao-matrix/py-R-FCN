@@ -1,4 +1,6 @@
 name: "ResNet-101"
+# time_info: true
+
 layer {
   name: 'input-data'
   type: 'Python'
