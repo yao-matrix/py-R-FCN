@@ -1,5 +1,6 @@
 name: "ResNet-101"
 # time_info: true
+engine: "MKL2017"
 
 layer {
   name: 'input-data'
@@ -7129,6 +7130,7 @@ layer {
     top: "rfcn_cls"
     name: "rfcn_cls"
     type: "Convolution"
+    engine: "CAFFE"
     convolution_param {
         num_output: 1029 #21*(7^2) cls_num*(score_maps_size^2)
         kernel_size: 1
