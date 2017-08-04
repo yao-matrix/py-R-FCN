@@ -1,10 +1,12 @@
 # Add-on Notes
-This branch of py-R-FCN extend [py-R-FCN](https://github.com/Orpine/py-R-FCN) by integrating [MKL DNN API accelerations](http://github.com/intel/caffe) and doing many extra OpenMP/Zero-Copy optimizations to make py-RFCN faster on Intel platform.We can get 20x acceleration compared with Vanilla CPU Caffe in Pascal-VOC RFCN end2end case in Xeon E5 2699-v4.
+This branch of py-R-FCN extend [py-R-FCN](https://github.com/Orpine/py-R-FCN) by integrating [MKL DNN API accelerations](http://github.com/intel/caffe) and doing many extra OpenMP/Zero-Copy optimizations to make py-RFCN faster on Intel platforms. We can get 20x acceleration compared with Vanilla CPU Caffe in Pascal-VOC RFCN end2end case in Xeon E5 2699-v4.
 
-## Known Issues
-1. ~~can not support fine tune models, I am fixing model parse issue in BN layer, you can run below cmd to test performance:~~
-   ~~$ ./experiments/scripts/rfcn_end2end.sh 0 ResNet-101 pascal_voc~~
-2. ~~Didn't implement softmax_loss_ohem_layer's CPU, coming soon...~~
+## TODO List
+- [x] support fine tune models, I am fixing model parse issue in BN layer, you can run below cmd to test performance:
+```shell
+   $ ./experiments/scripts/rfcn_end2end.sh 0 ResNet-101 pascal_voc
+```
+- [x] implement softmax_loss_ohem_layer's CPU.
 
 # py-R-FCN
 R-FCN: Object Detection via Region-based Fully Convolutional Networks
