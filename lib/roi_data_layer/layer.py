@@ -15,6 +15,7 @@ from fast_rcnn.config import cfg
 from roi_data_layer.minibatch import get_minibatch
 import numpy as np
 import yaml
+import psutil
 from multiprocessing import Process, Queue
 
 class RoIDataLayer(caffe.Layer):
@@ -72,6 +73,8 @@ class RoIDataLayer(caffe.Layer):
                                                  self._roidb,
                                                  self._num_classes)
             self._prefetch_process.start()
+            p = psutil.Process(self._prefetch_process.pid)
+            p.cpu_affinity([67])
             # Terminate the child process when the parent exists
             def cleanup():
                 print 'Terminating BlobFetcher'
